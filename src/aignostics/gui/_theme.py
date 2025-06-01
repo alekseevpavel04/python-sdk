@@ -30,12 +30,10 @@ def theme() -> None:
         warning="#FFCC00",
         brand_white="#EFF0F1",
         brand_background_light="#E7E6E8",
+        brand_logo="#AFA3DD",
     )
 
     ui.add_head_html("""
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Dives+Akuru&display=swap" rel="stylesheet">
         <style type="text/tailwindcss">
             @layer components {
                 .blue-box {
@@ -50,6 +48,9 @@ def theme() -> None:
             }
             ::-webkit-scrollbar {
                 display: none;
+            }
+            .bg-warning {
+                color: black !important;
             }
             .bg-aignostics-light {
                 background-color: #ECEDE9 !important;
@@ -75,10 +76,15 @@ def theme() -> None:
             }
             .nicegui-markdown {
                 ol {
-                    padding-left: 15px;
+                    padding-left: 20px;
                 }
             }
         </style>
     """)
+
+    ui.add_body_html(
+        '<script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/'
+        'dotlottie-player.mjs" type="module"></script>'
+    )
 
     ui.dark_mode(app.storage.general.get("dark_mode", False))

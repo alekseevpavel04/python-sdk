@@ -34,8 +34,43 @@ def test_cli_settings(runner: CliRunner) -> None:
 
 
 @pytest.mark.sequential
-def test_cli_install_and_launch_embedded(runner: CliRunner) -> None:
-    """Check expected column returned."""
+def test_cli_install_and_uninstall(runner: CliRunner) -> None:
+    """Check (un)install works for Windows, Mac and Linux package."""
+    # Uninstall QuPath if it exists to have a clean state for the test
+    result = runner.invoke(cli, ["qupath", "uninstall"])
+    was_installed = result.exit_code == 0
+
+    # Test installation and uninstallation on different platforms
+    platforms_to_test = [
+        {"system": "Windows"},
+        {"system": "Linux"},
+        {"system": "Darwin", "machine": "amd64"},
+        {"system": "Darwin", "machine": "arm64"},
+    ]
+
+    for platform_config in platforms_to_test:
+        install_args = ["qupath", "install", "--platform-system", platform_config["system"]]
+        uninstall_args = ["qupath", "uninstall", "--platform-system", platform_config["system"]]
+        if "machine" in platform_config:
+            install_args.extend(["--platform-machine", platform_config["machine"]])
+            uninstall_args.extend(["--platform-machine", platform_config["machine"]])
+
+        result = runner.invoke(cli, install_args)
+        assert "QuPath v0.5.1 installed successfully" in result.output.replace("\n", "")
+        assert result.exit_code == 0
+
+        result = runner.invoke(cli, uninstall_args)
+        assert "QuPath uninstalled successfully." in result.output.replace("\n", "")
+        assert result.exit_code == 0
+
+    # Reinstall QuPath if it was installed before
+    if was_installed:
+        result = runner.invoke(cli, ["qupath", "install"])
+
+
+@pytest.mark.sequential
+def test_cli_install_and_launch_headless(runner: CliRunner) -> None:
+    """Check (un)install and launching headless works."""
     # Uninstall QuPath if it exists to have a clean state for the test
     result = runner.invoke(cli, ["qupath", "uninstall"])
     was_installed = result.exit_code == 0
@@ -81,7 +116,7 @@ def test_cli_install_and_launch_embedded(runner: CliRunner) -> None:
 
 @pytest.mark.sequential
 def test_cli_install_and_launch_ui(runner: CliRunner) -> None:
-    """Check expected column returned."""
+    """Check (un)install and launching UI versin of QuPath works."""
     if platform.system() == "Linux":
         pytest.skip("unsupported test for Linux platform")
 

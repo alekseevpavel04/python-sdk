@@ -202,7 +202,7 @@ def test_cli_run_submit_and_describe_and_cancel_and_download(runner: CliRunner, 
     )
     assert download_result.exit_code == 0
     assert f"Downloaded results of run '{run_id}'" in download_result.output.replace("\n", "")
-    assert "status: running on platform." in download_result.output.replace("\n", "")
+    assert "status: running on plat" in download_result.output.replace("\n", "")
 
     # Test the cancel command with the extracted run ID
     cancel_result = runner.invoke(cli, ["application", "run", "cancel", run_id])

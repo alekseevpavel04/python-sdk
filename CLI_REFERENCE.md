@@ -14,7 +14,7 @@ $ aignostics [OPTIONS] COMMAND [ARGS]...
 * `--show-completion`: Show completion for the current shell, to copy it or customize the installation.
 * `--help`: Show this message and exit.
 
-🔬 Aignostics Python SDK v0.2.16 - built with love in Berlin 🐻
+🔬 Aignostics Python SDK v0.2.19 - built with love in Berlin 🐻
 
 **Commands**:
 
@@ -169,7 +169,7 @@ $ aignostics application run execute [OPTIONS] APPLICATION_VERSION_ID METADATA_C
 
 * `--create-subdirectory-for-run / --no-create-subdirectory-for-run`: Create a subdirectory for the results of the run in the destination directory  [default: create-subdirectory-for-run]
 * `--create-subdirectory-per-item / --no-create-subdirectory-per-item`: Create a subdirectory per item in the destination directory  [default: create-subdirectory-per-item]
-* `--upload-prefix TEXT`: Prefix for the upload destination. If not given will be set to current milliseconds.  [default: 1748462646380.398]
+* `--upload-prefix TEXT`: Prefix for the upload destination. If not given will be set to current milliseconds.  [default: 1748769980564.0728]
 * `--wait-for-completion / --no-wait-for-completion`: Wait for run completion and download results incrementally  [default: wait-for-completion]
 * `--help`: Show this message and exit.
 
@@ -225,7 +225,7 @@ $ aignostics application run upload [OPTIONS] APPLICATION_VERSION_ID METADATA_CS
 
 **Options**:
 
-* `--upload-prefix TEXT`: Prefix for the upload destination. If not given will be set to current milliseconds.  [default: 1748462646380.4841]
+* `--upload-prefix TEXT`: Prefix for the upload destination. If not given will be set to current milliseconds.  [default: 1748769980564.2349]
 * `--help`: Show this message and exit.
 
 #### `aignostics application run submit`
@@ -330,19 +330,23 @@ Download results of a run.
 **Usage**:
 
 ```console
-$ aignostics application run result download [OPTIONS] RUN_ID DESTINATION_DIRECTORY
+$ aignostics application run result download [OPTIONS] RUN_ID [DESTINATION_DIRECTORY]
 ```
 
 **Arguments**:
 
 * `RUN_ID`: Id of the run to download results for  [required]
-* `DESTINATION_DIRECTORY`: Destination directory to download results to  [required]
+* `[DESTINATION_DIRECTORY]`: Destination directory to download results to  [default: /Users/helmut/Library/Application Support/aignostics/results]
 
 **Options**:
 
 * `--create-subdirectory-for-run / --no-create-subdirectory-for-run`: Create a subdirectory for the results of the run in the destination directory  [default: create-subdirectory-for-run]
 * `--create-subdirectory-per-item / --no-create-subdirectory-per-item`: Create a subdirectory per item in the destination directory  [default: create-subdirectory-per-item]
 * `--wait-for-completion / --no-wait-for-completion`: Wait for run completion and download results incrementally  [default: wait-for-completion]
+* `--qupath-project / --no-qupath-project`: Create a QuPath project referencing input slides and results. 
+The QuPath project will be created in a subfolder of the destination directory. 
+This option requires the QuPath extension for Launchpad: start the Launchpad with `uvx --with &quot;aignostics&quot; aignostics ...` 
+This options requires installation of the QuPath application: Run uvx --with &quot;aignostics&quot; aignostics qupath install  [default: no-qupath-project]
 * `--help`: Show this message and exit.
 
 ##### `aignostics application run result delete`
@@ -589,7 +593,7 @@ $ aignostics dataset idc download [OPTIONS] SOURCE [TARGET]
 **Arguments**:
 
 * `SOURCE`: Identifier or comma-separated set of identifiers. IDs matched against collection_id, PatientId, StudyInstanceUID, SeriesInstanceUID or SOPInstanceUID.  [required]
-* `[TARGET]`: target directory for download  [default: /Users/helmut/Code/python-sdk]
+* `[TARGET]`: target directory for download  [default: /Users/helmut/Library/Application Support/aignostics/datasets/idc]
 
 **Options**:
 
@@ -622,13 +626,13 @@ Download from bucket to folder via a signed URL.
 **Usage**:
 
 ```console
-$ aignostics dataset aignostics download [OPTIONS] SOURCE_URL DESTINATION_DIRECTORY
+$ aignostics dataset aignostics download [OPTIONS] SOURCE_URL [DESTINATION_DIRECTORY]
 ```
 
 **Arguments**:
 
 * `SOURCE_URL`: URL to download, e.g. gs://aignx-storage-service-dev/sample_data_formatted/9375e3ed-28d2-4cf3-9fb9-8df9d11a6627.tiff  [required]
-* `DESTINATION_DIRECTORY`: Destination directory to download to  [required]
+* `[DESTINATION_DIRECTORY]`: Destination directory to download to  [default: /Users/helmut/Library/Application Support/aignostics/datasets/aignostics]
 
 **Options**:
 
@@ -650,15 +654,19 @@ $ aignostics qupath [OPTIONS] COMMAND [ARGS]...
 
 **Commands**:
 
-* `install`: Install Paquo.
+* `install`: Install QuPath application.
 * `launch`: Launch QuPath application.
+* `info`: Get info about QuPath installation.
 * `settings`: Show settings configured for Paquo based...
 * `defaults`: Show default settings of Paquo based...
 * `uninstall`: Uninstall QuPath application.
+* `add`: Add image(s) to QuPath project.
+* `annotate`: Add image(s) to QuPath project.
+* `inspect`: Inspect project.
 
 ### `aignostics qupath install`
 
-Install Paquo.
+Install QuPath application.
 
 **Usage**:
 
@@ -671,6 +679,8 @@ $ aignostics qupath install [OPTIONS]
 * `--version TEXT`: Version of QuPath to install. Do not change this unless you know what you are doing.  [default: 0.5.1]
 * `--path DIRECTORY`: Path to install QuPath to. If not specified, the default installation path will be used.Do not change this unless you know what you are doing.  [default: /Users/helmut/Library/Application Support/aignostics]
 * `--reinstall / --no-reinstall`: Reinstall QuPath even if it is already installed. This will overwrite the existing installation.  [default: reinstall]
+* `--platform-system TEXT`: Override the system to assume for the installation. This is useful for testing purposes.  [default: Darwin]
+* `--platform-machine TEXT`: Override the machine architecture to assume for the installation. This is useful for testing purposes.  [default: arm64]
 * `--help`: Show this message and exit.
 
 ### `aignostics qupath launch`
@@ -681,6 +691,22 @@ Launch QuPath application.
 
 ```console
 $ aignostics qupath launch [OPTIONS]
+```
+
+**Options**:
+
+* `--project DIRECTORY`: Path to QuPath project directory.
+* `--image TEXT`: Path to image. Must be part of QuPath project
+* `--help`: Show this message and exit.
+
+### `aignostics qupath info`
+
+Get info about QuPath installation.
+
+**Usage**:
+
+```console
+$ aignostics qupath info [OPTIONS]
 ```
 
 **Options**:
@@ -729,6 +755,65 @@ $ aignostics qupath uninstall [OPTIONS]
 
 * `--version TEXT`: Version of QuPath to install. Do not change this unless you know what you are doing.  [default: 0.5.1]
 * `--path DIRECTORY`: Path to install QuPath to. If not specified, the default installation path will be used.Do not change this unless you know what you are doing.  [default: /Users/helmut/Library/Application Support/aignostics]
+* `--platform-system TEXT`: Override the system to assume for the installation. This is useful for testing purposes.  [default: Darwin]
+* `--platform-machine TEXT`: Override the machine architecture to assume for the installation. This is useful for testing purposes.  [default: arm64]
+* `--help`: Show this message and exit.
+
+### `aignostics qupath add`
+
+Add image(s) to QuPath project. Creates project if it does not exist.
+
+**Usage**:
+
+```console
+$ aignostics qupath add [OPTIONS] PROJECT PATH...
+```
+
+**Arguments**:
+
+* `PROJECT`: Path to QuPath project directory. Will be created if it does not exist.  [required]
+* `PATH...`: One or multiple paths. A path can point to an individual image or folder.In case of a folder, all images within will be added for supported image types.  [required]
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+### `aignostics qupath annotate`
+
+Add image(s) to QuPath project. Creates project if it does not exist.
+
+**Usage**:
+
+```console
+$ aignostics qupath annotate [OPTIONS] PROJECT IMAGE ANNOTATIONS
+```
+
+**Arguments**:
+
+* `PROJECT`: Path to QuPath project directory. Will be created if it does not exist.  [required]
+* `IMAGE`: Path to image to annotate. If the image is not part of the project, it will be added.  [required]
+* `ANNOTATIONS`: Path to polygons file to import. The file must be a compatible GeoJSON file.  [required]
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+### `aignostics qupath inspect`
+
+Inspect project.
+
+**Usage**:
+
+```console
+$ aignostics qupath inspect [OPTIONS] PROJECT
+```
+
+**Arguments**:
+
+* `PROJECT`: Path to QuPath project directory.  [required]
+
+**Options**:
+
 * `--help`: Show this message and exit.
 
 ## `aignostics system`

@@ -8,9 +8,11 @@ __all__ = []
 if find_spec("paquo") and find_spec("nicegui"):
     from ._cli import cli
     from ._gui import PageBuilder
-    from ._service import Service
+    from ._service import AddProgress, AnnotateProgress, Service
 
     __all__ += [
+        "AddProgress",
+        "AnnotateProgress",
         "PageBuilder",
         "Service",
         "cli",

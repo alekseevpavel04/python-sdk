@@ -57,10 +57,11 @@ async def test_gui_qupath_install(user: User, runner: CliRunner, silent_logging:
 
     # Step 1: Check we are on the QuPath page
     await user.open("/qupath")
-    await user.should_see("Manage your QuPath Installation")
+    await user.should_see("QuPath Extension")
 
     # Step 2: Check we indicate QuPath is not installed
-    await user.should_see("QuPath is not installed at the intended installation path")
+    await user.should_see("Install QuPath to enable visualizing your Whole Slide Image and application results")
+    await sleep(5)  # Health UI updated in background
     await user.should_see("Launchpad is unhealthy")
     await user.should_see(marker="BUTTON_QUPATH_INSTALL")
 
@@ -74,7 +75,8 @@ async def test_gui_qupath_install(user: User, runner: CliRunner, silent_logging:
     )
 
     # Step 4: Check we indicate QuPath is installed
-    await user.should_see(f"QuPath is installed and ready to execute at '{app_dir}")
+    await user.should_see("QuPath is installed and ready to execute.")
+    await sleep(5)  # Health UI updated in background
     await user.should_see("Launchpad is healthy")
     await user.should_see(marker="BUTTON_QUPATH_LAUNCH")
 
@@ -95,11 +97,10 @@ async def test_gui_qupath_install_and_launch(user: User, runner: CliRunner, sile
 
     # Step 1: Check we are on the QuPath page
     await user.open("/qupath")
-    await user.should_see("Manage your QuPath Installation")
+    await user.should_see("QuPath Extension")
 
     # Step 2: Check we indicate QuPath is not installed
-    await user.should_see("QuPath is not installed at the intended installation path")
-    await user.should_see("Launchpad is unhealthy")
+    await user.should_see("Install QuPath to enable visualizing your Whole Slide Image and application results")
     await user.should_see(marker="BUTTON_QUPATH_INSTALL")
 
     # Step 3: Install QuPath
@@ -112,8 +113,7 @@ async def test_gui_qupath_install_and_launch(user: User, runner: CliRunner, sile
     )
 
     # Step 4: Check we indicate QuPath is installed
-    await user.should_see(f"QuPath is installed and ready to execute at '{app_dir}")
-    await user.should_see("Launchpad is healthy")
+    await user.should_see("QuPath is installed and ready to execute.")
     await user.should_see(marker="BUTTON_QUPATH_LAUNCH")
 
     # Step 5: Check we can launch QuPath

@@ -1,6 +1,7 @@
 """Homepage (index) of GUI."""
 
 from aignostics.gui import frame
+from aignostics.utils import BaseService, locate_subclasses
 
 from ..utils import BasePageBuilder  # noqa: TID252
 from ._service import Service
@@ -11,7 +12,7 @@ class PageBuilder(BasePageBuilder):
     def register_pages() -> None:
         from nicegui import run, ui  # noqa: PLC0415
 
-        Service().health()  # Ensure settings are loaded
+        locate_subclasses(BaseService)  # Ensure settings are loaded
 
         ui.add_head_html("""
             <style>
