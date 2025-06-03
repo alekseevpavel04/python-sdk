@@ -304,7 +304,7 @@ async def test_gui_run_open_qupath(user: User, runner: CliRunner, tmp_path: Path
         gui_register_pages()
 
         result = runner.invoke(cli, ["qupath", "install"])
-        assert "QuPath v0.5.1 installed successfully" in result.output.replace("\n", "")
+        assert "QuPath v0.6.0-rc5 installed successfully" in result.output.replace("\n", "")
         assert result.exit_code == 0
 
         latest_version = Service().application_version_latest(Service().application(HETA_APPLICATION_ID))
