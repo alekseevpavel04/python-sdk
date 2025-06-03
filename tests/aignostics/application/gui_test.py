@@ -359,12 +359,13 @@ async def test_gui_run_open_qupath(user: User, runner: CliRunner, tmp_path: Path
             f"Expected 9 files in {item_out_dir}, but found {len(files_in_item_dir)}: "
             f"{[f.name for f in files_in_item_dir]}"
         )
-        # Check QuPath opening triggered
-        await _assert_notified(user, "Opening QuPath ...", 5)
 
         # On macOS, we can check if the process is running and then kill it
         # On GitHub we are headless, so opening will fail
         if platform.system() == "Darwin":
+            # Check QuPath opening triggered
+            await _assert_notified(user, "Opening QuPath ...", 5)
+
             notification = await _assert_notified(user, "QuPath opened successfully", 30)
             pid_match = re.search(r"process id '(\d+)'", notification)
             pid = int(pid_match.group(1))

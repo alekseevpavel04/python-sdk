@@ -140,13 +140,25 @@ def launch(
             help="Path to image. Must be part of QuPath project",
         ),
     ] = None,
+    script: Annotated[
+        Path | None,
+        typer.Option(
+            help="Path to QuPath script to run on launch. Must be part of QuPath project.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            writable=False,
+            readable=True,
+            resolve_path=True,
+        ),
+    ] = None,
 ) -> None:
     """Launch QuPath application."""
     try:
         if not Service().is_qupath_installed():
             console.print("QuPath is not installed. Use 'uvx aignostics qupath install' to install it.")
             sys.exit(2)
-        pid = Service().launch_qupath(project=project, image=image)
+        pid = Service().launch_qupath(project=project, image=image, script=script)
         if not pid:
             console.print("QuPath could not be launched.", style="error")
             sys.exit(1)

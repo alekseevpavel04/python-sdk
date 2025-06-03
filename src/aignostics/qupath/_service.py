@@ -833,6 +833,7 @@ class Service(BaseService):
         quiet: bool = True,
         project: Path | None = None,
         image: str | Path | None = None,
+        script: str | Path | None = None,
     ) -> int | None:
         """Launch QuPath application.
 
@@ -841,6 +842,7 @@ class Service(BaseService):
             project (Path | None): Path to the QuPath project to open. If None, no project will be opened.
             image: str | Path | None: Path to the image file to open in QuPath. If project path given as well,
                 this must be the name of the image within project as str.
+            script (str | Path | None): Path to the script to run in QuPath. If None, no script will be run.
 
         Returns:
             bool: True if QuPath was launched successfully, False otherwise.
@@ -856,18 +858,23 @@ class Service(BaseService):
 
         if platform.system() in {"Linux", "Darwin", "Windows"}:
             command = [str(application_path)]
-            if quiet:
+            if script:
+                command.extend(["script"])
+            if quiet and not script:
                 command.append("-q")
             if image:
                 command.extend(["-i", str(image)])
             if project:
                 command.extend(["-p", str(project.resolve() / PROJECT_FILENAME)])
+            if script:
+                command.extend([str(script)])
         else:
             message = f"Unsupported platform: {platform.system()}"
             logger.error(message)
             raise NotImplementedError(message)
 
         try:
+            logger.debug("Launching QuPath with command: %s", " ".join(command))
             process = subprocess.Popen(  # noqa: S603
                 command,
                 stdout=subprocess.PIPE,
@@ -1007,7 +1014,7 @@ class Service(BaseService):
         return project_path
 
     @staticmethod
-    def add(  # noqa: C901
+    def add(  # noqa: C901, PLR0915
         project: Path,
         paths: list[Path],
         progress_callable: Callable | None = None,  # type: ignore[type-arg]
@@ -1033,6 +1040,8 @@ class Service(BaseService):
 
         project_path = Service._check_project_path(project)
 
+        from unittest.mock import patch  # noqa: PLC0415
+
         from paquo.images import QuPathImageType  # noqa: PLC0415
         from paquo.java import LogManager  # noqa: PLC0415
         from paquo.projects import QuPathProject  # noqa: PLC0415
@@ -1044,8 +1053,33 @@ class Service(BaseService):
             progress.status = AddProgressState.CREATING_PROJECT
             progress_callable(progress)
 
-        with QuPathProject(project_path, mode="a") as qp:
-            logger.debug("Finding images for QuPath project at '%s'", project_path)
+        # Patch the uri property to use getURIs() instead of getServerURIs(),
+        # as getServerURIs is deprecated in 0.5.1 and gone with 0.6.x
+        def mock_uri_property(self) -> str:  # type: ignore[no-untyped-def]  # noqa: ANN001
+            """Mock uri property that uses getURIs() instead of getServerURIs().
+
+            Args:
+                self: The QuPathImageEntry instance.
+
+            Returns:
+                str: The URI string from the first available URI.
+
+            Raises:
+                RuntimeError: If no server URIs are available.
+                NotImplementedError: If multiple URIs are found (not supported).
+            """
+            uris = self.java_object.getURIs()
+            if len(uris) == 0:
+                msg = "no server"
+                raise RuntimeError(msg)  # pragma: no cover
+            if len(uris) > 1:
+                msg = "unsupported in paquo as of now"
+                raise NotImplementedError(msg)
+            return str(uris[0].toString())
+
+        with patch("paquo.images.QuPathProjectImageEntry.uri", new_callable=lambda: property(mock_uri_property)):
+            with QuPathProject(project_path, mode="a") as qp:
+                logger.debug("Finding images for QuPath project at '%s'", project_path)
 
             if progress_callable:
                 progress.status = AddProgressState.FINDING_IMAGES
@@ -1092,7 +1126,7 @@ class Service(BaseService):
             return added_count
 
     @staticmethod
-    def annotate(  # noqa: C901, PLR0912, PLR0915
+    def annotate(  # noqa: C901
         project: Path,
         image: Path,
         annotations: Path,
@@ -1117,7 +1151,7 @@ class Service(BaseService):
             progress = AnnotateProgress()
             progress_callable(progress)
 
-        project_path = Service._check_project_path(project)
+        Service._check_project_path(project)
 
         if not image.is_file():
             message = f"Image path '{image!s}' is not a valid file."
@@ -1134,113 +1168,157 @@ class Service(BaseService):
             progress.image_path = image
             progress_callable(progress)
 
-        from paquo.images import QuPathImageType, QuPathProjectImageEntry  # noqa: PLC0415
-        from paquo.java import LogManager  # noqa: PLC0415
-        from paquo.projects import QuPathProject  # noqa: PLC0415
-
-        if LogManager:
-            LogManager.setWarn()
-
-        annotation_index = 0
-
         if progress_callable:
             progress.status = AnnotateProgressState.OPENING_PROJECT
             progress_callable(progress)
 
-        with QuPathProject(project_path, mode="a") as qp:  # noqa: PLR1702
-            message = f"Opened QuPath project at '{project_path}', finding image ..."
+        if progress_callable:
+            progress.status = AnnotateProgressState.FINDING_IMAGE
+            progress_callable(progress)
+
+        if progress_callable:
+            progress.status = AnnotateProgressState.COUNTING
+            progress_callable(progress)
+
+        annotation_count = 0
+        with open(annotations, "rb") as f:
+            features_parser = ijson.items(f, "features.item")
+            for _ in features_parser:
+                annotation_count += 1
+
+        if progress_callable:
+            progress.annotation_count = annotation_count
+            progress.status = AnnotateProgressState.ANNOTATING
+            progress_callable(progress)
+
+        # Generate and execute Groovy script to import annotations
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            script_path = Path(tmp_dir) / "annotate.groovy"
+
+            # Generate Groovy script content based on the template
+            groovy_script_content = f"""import qupath.lib.io.GsonTools
+import qupath.lib.objects.PathObjects
+import qupath.lib.regions.ImagePlane
+import qupath.lib.roi.ROIs
+import qupath.lib.geom.Point2
+import qupath.lib.objects.classes.PathClass
+import java.awt.Color
+import java.io.File
+
+// Check we are in a project
+def project = getProject()
+if (project == null) {{
+    println("No project found! Did you launch this script with -p?")
+    return
+}}
+
+// Load the image data
+def imageName = "{image.name}"
+println("Looking for image: " + imageName)
+def imageEntry = project.getImageList().find {{ entry ->
+    entry.getImageName().contains(imageName)
+}}
+if (imageEntry == null) {{
+    println("Image not found in project. Available images:")
+    project.getImageList().each {{ entry ->
+        println("  - " + entry.getImageName())
+    }}
+    return
+}}
+println("Found image: " + imageEntry.getImageName())
+def imageData = imageEntry.readImageData()
+
+// Open the geojson
+def jsonPath = "{annotations.as_posix()}"
+println("Loading annotations from: " + jsonPath)
+def jsonFile = new File(jsonPath)
+if (!jsonFile.exists()) {{
+    println("File not found: " + jsonPath)
+    return
+}}
+def gson = GsonTools.getInstance(true)
+def json = jsonFile.text
+
+// Parse as GeoJSON
+def type = new com.google.gson.reflect.TypeToken<Map<String, Object>>(){{}}.getType()
+def geoJsonData = gson.fromJson(json, type)
+
+// Get current image plane
+def plane = ImagePlane.getDefaultPlane()
+
+// Create list for new objects
+def newObjects = []
+
+// Process GeoJSON features
+def features = geoJsonData.features
+features.each {{ feature ->
+    def geometry = feature.geometry
+    def properties = feature.properties ?: [:]
+
+    if (geometry.type == "Polygon") {{
+        // Get exterior ring coordinates and convert to Point2 objects
+        def coordinates = geometry.coordinates[0]
+        def points = coordinates.collect {{ coord ->
+            return new Point2(coord[0] as double, coord[1] as double)
+        }}
+
+        // Create polygon ROI
+        def roi = ROIs.createPolygonROI(points, plane)
+
+        // Create annotation object instead of detection
+        def pathObject = PathObjects.createAnnotationObject(roi)
+
+        // Set classification if available
+        if (properties.classification) {{
+            def className = properties.classification.name
+            def colorArray = properties.classification.color
+
+            // Create PathClass with color
+            def pathClass = PathClass.fromString(className)
+            if (colorArray && colorArray.size() >= 3) {{
+                def color = new Color(colorArray[0] as int, colorArray[1] as int, colorArray[2] as int)
+                pathClass = PathClass.fromString(className, color.getRGB())
+            }}
+            pathObject.setPathClass(pathClass)
+        }}
+
+        // Add other properties as metadata
+        properties.each {{ key, value ->
+            if (key != "classification") {{
+                pathObject.getMetadata().put(key.toString(), value.toString())
+            }}
+        }}
+
+        newObjects.add(pathObject)
+    }}
+}}
+
+// Add objects to hierarchy
+println("Adding annotations ...")
+imageData.getHierarchy().addObjects(newObjects)
+println("Added " + newObjects.size() + " annotations from GeoJSON")
+
+// Save image
+println("Saving image ...")
+imageEntry.saveImageData(imageData)
+println("Saved image.")
+
+"""
+
+            # Write the Groovy script to temporary file
+            script_path.write_text(groovy_script_content, encoding="utf-8")
+
+            message = f"Generated Groovy script at: {script_path}"
             logger.debug(message)
 
-            if progress_callable:
-                progress.status = AnnotateProgressState.FINDING_IMAGE
-                progress_callable(progress)
+            # Launch QuPath with the generated script
+            Service.launch_qupath(project=project, script=script_path)
 
-            try:
-                target_image = None
-                for qp_image in qp.images:
-                    image_path_str = str(image.resolve())
-                    if platform.system() == "Windows":  # TODO(Helmut): Check how QuPath represents paths on Windows
-                        image_path_str = image_path_str.replace("\\", "/")
-                    if qp_image.uri == "file://" + image_path_str:
-                        message = f"Image with matching URL {qp_image.uri} found in project."
-                        logger.debug(message)
-                        target_image = qp_image
-                        break
-                if not target_image:
-                    logger.debug("Image not found in project, adding it.")
-                    try:
-                        target_image = qp.add_image(
-                            image,
-                            image_type=QuPathImageType.BRIGHTFIELD_H_E,
-                        )
-                    except FileExistsError:
-                        message = f"Image '{image!s}' already exists in project, skipping annotation"
-                        logger.warning(message)
-                        return 0
-                if type(target_image) is not QuPathProjectImageEntry:
-                    message = f"Expected QuPathProjectImageEntry, got {type(target_image)}"
-                    logger.error(message)
-                    raise ValueError(message)  # noqa: TRY301
+        if progress_callable:
+            progress.status = AnnotateProgressState.COMPLETED
+            progress_callable(progress)
 
-                target_image.hierarchy.no_autoflush()
-
-                message = f"Loading annotations from '{annotations}' for image '{image}' ..."
-                logger.debug(message)
-
-                if progress_callable:
-                    progress.status = AnnotateProgressState.COUNTING
-                    progress_callable(progress)
-
-                annotation_count = 0
-                with open(annotations, "rb") as f:
-                    features_parser = ijson.items(f, "features.item")
-                    for _ in features_parser:
-                        annotation_count += 1
-
-                if progress_callable:
-                    progress.annotation_count = annotation_count
-                    progress.status = AnnotateProgressState.ANNOTATING
-                    progress_callable(progress)
-
-                with open(annotations, "rb") as f:
-                    features_parser = ijson.items(f, "features.item")
-                    current_batch = []
-
-                    def process_batch(batch: list) -> int:  # type: ignore[type-arg]
-                        if not batch:
-                            return 0
-                        logger.debug("Processing batch of %d annotations", len(batch))
-                        target_image.hierarchy.load_geojson(batch, raise_on_skip=False, fix_invalid=True)
-                        logger.debug("Flushing hierarchy after adding %d annotations", len(batch))
-                        target_image.hierarchy.flush()
-                        return len(batch)
-
-                    for feature in features_parser:
-                        current_batch.append(feature)
-                        if len(current_batch) >= ANNOTATIONS_BATCH_SIZE:
-                            annotation_index += process_batch(current_batch)
-                            current_batch = []
-
-                            if progress_callable:
-                                progress.annotation_index = annotation_index
-                                progress_callable(progress)
-
-                    annotation_index += process_batch(current_batch)
-
-                    if progress_callable:
-                        progress.annotation_index = annotation_index
-                        progress_callable(progress)
-
-                if progress_callable:
-                    progress.status = AnnotateProgressState.COMPLETED
-                    progress_callable(progress)
-
-            except Exception as e:
-                message = f"Failed to annotate image '{image!s}' in project '{project!s}': {e!s}"
-                logger.exception(message)
-                raise RuntimeError(message) from e
-
-        return annotation_index
+        return annotation_count
 
     @staticmethod
     def inspect(project: Path) -> dict[str, Any]:
