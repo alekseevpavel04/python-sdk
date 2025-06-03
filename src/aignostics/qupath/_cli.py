@@ -163,14 +163,11 @@ def launch(
 @cli.command()
 def info() -> None:
     """Get info about QuPath installation."""
+    if not Service().is_qupath_installed():
+        console.print("QuPath is not installed. Use 'uvx aignostics qupath install' to install it.", style="warning")
+        sys.exit(2)
     try:
-        info = Service().get_qupath_info()
-        if not info:
-            console.print(
-                "QuPath is not installed. Use 'uvx aignostics qupath install' to install it.", style="warning"
-            )
-            sys.exit(2)
-        console.print_json(data=info)
+        console.print_json(data=Service().info())
     except Exception as e:
         message = f"Failed to get QuPath info: {e!s}."
         logger.exception(message)
@@ -193,11 +190,11 @@ def defaults() -> None:
 @cli.command()
 def uninstall(
     version: Annotated[
-        str,
+        str | None,
         typer.Option(
-            help="Version of QuPath to install. Do not change this unless you know what you are doing.",
+            help="Version of QuPath to install. If not specified, all versions will be uninstalled.",
         ),
-    ] = QUPATH_VERSION,
+    ] = None,
     path: Annotated[
         Path,
         typer.Option(
