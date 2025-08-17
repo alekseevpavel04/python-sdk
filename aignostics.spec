@@ -25,6 +25,11 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 # layer gui
 datas += collect_data_files('nicegui')
 
+if platform.system() == "Linux":
+    tmp_ret = collect_all('PyQT5')
+    datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+
+
 # module platform
 datas += collect_data_files('rfc3987_syntax')
 
