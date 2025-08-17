@@ -50,17 +50,21 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
-      - name: Install upx for native Windows version
+      - name: Install upx for native Windows application
         if: ${{ matrix.runner == 'windows-latest' || matrix.runner == 'windows-11-arm' }}
         shell: bash
         run: |
           choco install upx --no-progress
 
-      - name: Install upx for native Linux version
+      - name: Install upx for native Linux application
         if: ${{ matrix.runner == 'ubuntu-latest' || matrix.runner == 'ubuntu-24.04-arm' }}
         uses: crazy-max/ghaction-upx@v3
         with:
           install-only: true
+
+      - name: UPX version on Linux
+        if: ${{ matrix.runner == 'ubuntu-latest' || matrix.runner == 'ubuntu-24.04-arm' }}
+        run: upx --version
 
       - name: Build native distribution into dist_native/
         shell: bash
