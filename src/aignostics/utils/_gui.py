@@ -70,9 +70,9 @@ def gui_run(  # noqa: PLR0913, PLR0917
         message = "with_api is not supported in this project."
         raise ValueError(message)
 
-    if native and platform.system() == "Linux":
-        native = False
-        show = True
+    # if native and platform.system() == "Linux":
+    #    native = False
+    #    show = True
 
     gui_register_pages()
 
