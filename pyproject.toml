@@ -116,7 +116,7 @@ dependencies = [
     "pandas<=2.3.1",
     "pyjwt[crypto]>=2.10.1",
     "python-dateutil>=2.9.0.post0",
-    "pywebview[qt5]>=5.4; sys_platform == 'linux'",
+    "pywebview[gtk]>=5.4; sys_platform == 'linux'",
     "requests>=2.32.3",
     "requests-oauthlib>=2.0.0",
     "s5cmd>=0.2.0",
