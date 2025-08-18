@@ -67,3 +67,4 @@ jobs:
           name: dist_native-${{ matrix.runner }}
           path: dist_native/aignostics.7z
           retention-days: 1
+
