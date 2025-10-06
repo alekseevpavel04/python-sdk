@@ -2,6 +2,20 @@
 
 This file provides comprehensive guidance to Claude Code (claude.ai/code) when working with the Aignostics Python SDK repository.
 
+## Quick Navigation for AI Agents
+
+**🤖 NEW: For comprehensive AI agent guidance, see [AGENTS.md](AGENTS.md)**
+
+The new AGENTS.md file provides:
+- AI agent-specific workflows and common tasks
+- Critical gotchas with examples (top 10)
+- Module-specific quick references
+- Testing strategies and debugging guides
+- Security considerations and performance tips
+- Quick command reference
+
+**Use AGENTS.md as your primary reference** for development workflows, and this file (CLAUDE.md) for architectural overview.
+
 ## Module Documentation Index
 
 Every module has detailed CLAUDE.md documentation. For module-specific guidance, see:
