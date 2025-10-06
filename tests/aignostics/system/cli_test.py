@@ -358,3 +358,31 @@ def test_cli_http_proxy(runner: CliRunner, silent_logging, tmp_path: Path) -> No
         result = runner.invoke(cli, ["system", "config", "get", "CURL_CA_BUNDLE"])
         assert result.exit_code == 0
         assert "None" in result.output
+
+
+@pytest.mark.timeout(15)
+def test_cli_online_when_online(runner: CliRunner) -> None:
+    """Test online command when system is online."""
+    from aignostics.system import Service
+    from aignostics.utils import Health
+
+    with patch.object(
+        Service, "_determine_network_health", return_value=Health(status=Health.Code.UP)
+    ):
+        result = runner.invoke(cli, ["system", "online"])
+        assert result.exit_code == 0
+        assert "Online" in result.output
+
+
+@pytest.mark.timeout(15)
+def test_cli_online_when_offline(runner: CliRunner) -> None:
+    """Test online command when system is offline."""
+    from aignostics.system import Service
+    from aignostics.utils import Health
+
+    with patch.object(
+        Service, "_determine_network_health", return_value=Health(status=Health.Code.DOWN, reason="Network error")
+    ):
+        result = runner.invoke(cli, ["system", "online"])
+        assert result.exit_code == 1
+        assert "Offline" in result.output

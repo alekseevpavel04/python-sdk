@@ -1,11 +1,13 @@
 """Tests of the system service."""
 
 import os
+import time
 from unittest import mock
 
 import pytest
 
 from aignostics.system._service import Service
+from aignostics.utils import Health
 
 
 @pytest.mark.timeout(15)
@@ -339,3 +341,133 @@ def test_is_secret_key_real_world_examples() -> None:
 
     for key in non_secret_examples:
         assert not Service._is_secret_key(key), f"Expected '{key}' to NOT be identified as a secret key"
+
+
+@pytest.mark.timeout(15)
+def test_is_online_when_online() -> None:
+    """Test that is_online returns True when network is available."""
+    service = Service()
+
+    # Mock _determine_network_health to return UP
+    with mock.patch.object(
+        service, "_determine_network_health", return_value=Health(status=Health.Code.UP)
+    ) as mock_health:
+        result = service.is_online()
+
+        assert result is True
+        mock_health.assert_called_once()
+
+
+@pytest.mark.timeout(15)
+def test_is_online_when_offline() -> None:
+    """Test that is_online returns False when network is unavailable."""
+    service = Service()
+
+    # Mock _determine_network_health to return DOWN
+    with mock.patch.object(
+        service, "_determine_network_health", return_value=Health(status=Health.Code.DOWN, reason="Network error")
+    ) as mock_health:
+        result = service.is_online()
+
+        assert result is False
+        mock_health.assert_called_once()
+
+
+@pytest.mark.timeout(15)
+def test_is_online_caching() -> None:
+    """Test that is_online properly caches results."""
+    # Create service with short cache duration
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_ONLINE_CACHE_DURATION": "2"}):
+        service = Service()
+
+        # Mock _determine_network_health to return UP
+        with mock.patch.object(
+            service, "_determine_network_health", return_value=Health(status=Health.Code.UP)
+        ) as mock_health:
+            # First call should hit the network
+            result1 = service.is_online()
+            assert result1 is True
+            assert mock_health.call_count == 1
+
+            # Second call within cache duration should use cache
+            result2 = service.is_online()
+            assert result2 is True
+            assert mock_health.call_count == 1  # Still only called once
+
+            # Third call within cache duration should still use cache
+            result3 = service.is_online()
+            assert result3 is True
+            assert mock_health.call_count == 1  # Still only called once
+
+
+@pytest.mark.timeout(15)
+def test_is_online_cache_expiration() -> None:
+    """Test that is_online cache expires after the configured duration."""
+    # Create service with very short cache duration
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_ONLINE_CACHE_DURATION": "1"}):
+        service = Service()
+
+        # Mock _determine_network_health to return UP
+        with mock.patch.object(
+            service, "_determine_network_health", return_value=Health(status=Health.Code.UP)
+        ) as mock_health:
+            # First call should hit the network
+            result1 = service.is_online()
+            assert result1 is True
+            assert mock_health.call_count == 1
+
+            # Wait for cache to expire
+            time.sleep(1.1)
+
+            # Second call after cache expiration should hit the network again
+            result2 = service.is_online()
+            assert result2 is True
+            assert mock_health.call_count == 2  # Called twice now
+
+
+@pytest.mark.timeout(15)
+def test_is_online_cache_duration_zero() -> None:
+    """Test that is_online with zero cache duration always checks network."""
+    # Create service with zero cache duration
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_ONLINE_CACHE_DURATION": "0"}):
+        service = Service()
+
+        # Mock _determine_network_health to return UP
+        with mock.patch.object(
+            service, "_determine_network_health", return_value=Health(status=Health.Code.UP)
+        ) as mock_health:
+            # First call
+            result1 = service.is_online()
+            assert result1 is True
+            assert mock_health.call_count == 1
+
+            # Second call should hit network again (cache disabled)
+            result2 = service.is_online()
+            assert result2 is True
+            assert mock_health.call_count == 2
+
+            # Third call should also hit network
+            result3 = service.is_online()
+            assert result3 is True
+            assert mock_health.call_count == 3
+
+
+@pytest.mark.timeout(15)
+def test_is_online_default_cache_duration() -> None:
+    """Test that is_online uses default cache duration of 60 seconds."""
+    service = Service()
+
+    # Verify the default cache duration is 60 seconds
+    assert service._settings.online_cache_duration == 60
+
+    # Mock _determine_network_health to return UP
+    with mock.patch.object(
+        service, "_determine_network_health", return_value=Health(status=Health.Code.UP)
+    ) as mock_health:
+        # Multiple calls within default cache duration should use cache
+        for _ in range(5):
+            result = service.is_online()
+            assert result is True
+
+        # Should only have called the network check once
+        assert mock_health.call_count == 1

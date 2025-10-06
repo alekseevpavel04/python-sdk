@@ -6,6 +6,7 @@ import platform
 import re
 import ssl
 import sys
+import time
 import typing as t
 from http import HTTPStatus
 from pathlib import Path
@@ -72,6 +73,7 @@ class Service(BaseService):
     """System service."""
 
     _settings: Settings
+    _online_cache: tuple[bool, float] | None = None
 
     def __init__(self) -> None:
         """Initialize service."""
@@ -115,6 +117,40 @@ class Service(BaseService):
             return Health(status=Health.Code.DOWN, reason=message)
 
         return Health(status=Health.Code.UP)
+
+    def is_online(self) -> bool:
+        """Check if system is online with caching.
+
+        Uses the well-known and reliable ipify.org service to check connectivity.
+        Results are cached based on the online_cache_duration setting (default 60 seconds).
+
+        Returns:
+            bool: True if online, False otherwise.
+        """
+        current_time = time.time()
+
+        # Check if we have a valid cached result
+        if self._online_cache is not None:
+            cached_status, cached_time = self._online_cache
+            cache_age = current_time - cached_time
+
+            if cache_age < self._settings.online_cache_duration:
+                logger.debug(
+                    "Using cached online status: %s (cached %0.1fs ago)",
+                    cached_status,
+                    cache_age,
+                )
+                return cached_status
+
+        # Perform fresh check
+        logger.debug("Performing fresh online check")
+        health = self._determine_network_health()
+        is_online = health.status == Health.Code.UP
+
+        # Update cache
+        self._online_cache = (is_online, current_time)
+
+        return is_online
 
     @staticmethod
     def health_static() -> Health:
