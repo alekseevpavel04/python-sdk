@@ -6,6 +6,7 @@ import platform
 import re
 import ssl
 import sys
+import time
 import typing as t
 from http import HTTPStatus
 from pathlib import Path
@@ -72,6 +73,9 @@ class Service(BaseService):
     """System service."""
 
     _settings: Settings
+
+    # Class-level cache for online status (shared across all instances)
+    _online_cache: dict[str, bool | float] = {"is_online": False, "timestamp": 0.0}
 
     def __init__(self) -> None:
         """Initialize service."""
@@ -148,6 +152,36 @@ class Service(BaseService):
         status = Health.Code.UP if self._is_healthy() else Health.Code.DOWN
         reason = None if self._is_healthy() else "System marked as unhealthy"
         return Health(status=status, components=components, reason=reason)
+
+    def is_online(self) -> bool:
+        """Check if the system is online (has network connectivity).
+
+        Uses a class-level cache to avoid repeated network calls. The cache duration
+        is configurable via the AIGNOSTICS_SYSTEM_ONLINE_CACHE_DURATION setting.
+
+        Returns:
+            bool: True if online, False otherwise.
+        """
+        current_time = time.time()
+        cache_duration = self._settings.online_cache_duration
+
+        # Check if cache is valid
+        if cache_duration > 0:
+            cached_timestamp = Service._online_cache.get("timestamp", 0.0)
+            if isinstance(cached_timestamp, float) and current_time - cached_timestamp < cache_duration:
+                cached_status = Service._online_cache.get("is_online", False)
+                if isinstance(cached_status, bool):
+                    return cached_status
+
+        # Perform actual network check
+        health = self._determine_network_health()
+        is_online = health.status == Health.Code.UP
+
+        # Update class-level cache
+        Service._online_cache["is_online"] = is_online
+        Service._online_cache["timestamp"] = current_time
+
+        return is_online
 
     def is_token_valid(self, token: str) -> bool:
         """Check if the presented token is valid.

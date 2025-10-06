@@ -358,3 +358,23 @@ def test_cli_http_proxy(runner: CliRunner, silent_logging, tmp_path: Path) -> No
         result = runner.invoke(cli, ["system", "config", "get", "CURL_CA_BUNDLE"])
         assert result.exit_code == 0
         assert "None" in result.output
+
+
+def test_cli_online_when_online(runner: CliRunner) -> None:
+    """Test that the online command exits with 0 when online."""
+    from aignostics.system._service import Service
+
+    with patch.object(Service, "is_online", return_value=True):
+        result = runner.invoke(cli, ["system", "online"])
+        assert result.exit_code == 0
+        assert "Online" in result.output
+
+
+def test_cli_online_when_offline(runner: CliRunner) -> None:
+    """Test that the online command exits with 1 when offline."""
+    from aignostics.system._service import Service
+
+    with patch.object(Service, "is_online", return_value=False):
+        result = runner.invoke(cli, ["system", "online"])
+        assert result.exit_code == 1
+        assert "Offline" in result.output

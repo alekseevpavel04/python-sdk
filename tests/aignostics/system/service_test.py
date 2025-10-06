@@ -1,6 +1,7 @@
 """Tests of the system service."""
 
 import os
+import time
 from unittest import mock
 
 import pytest
@@ -339,3 +340,115 @@ def test_is_secret_key_real_world_examples() -> None:
 
     for key in non_secret_examples:
         assert not Service._is_secret_key(key), f"Expected '{key}' to NOT be identified as a secret key"
+
+
+def test_is_online_when_online() -> None:
+    """Test that is_online returns True when network is available."""
+    # Reset cache before test
+    Service._online_cache = {"is_online": False, "timestamp": 0.0}
+
+    service = Service()
+    with mock.patch.object(Service, "_determine_network_health") as mock_health:
+        from aignostics.utils import Health
+
+        mock_health.return_value = Health(status=Health.Code.UP)
+        assert service.is_online() is True
+
+
+def test_is_online_when_offline() -> None:
+    """Test that is_online returns False when network is unavailable."""
+    # Reset cache before test
+    Service._online_cache = {"is_online": False, "timestamp": 0.0}
+
+    service = Service()
+    with mock.patch.object(Service, "_determine_network_health") as mock_health:
+        from aignostics.utils import Health
+
+        mock_health.return_value = Health(status=Health.Code.DOWN, reason="Network unavailable")
+        assert service.is_online() is False
+
+
+def test_is_online_caching() -> None:
+    """Test that is_online uses caching to avoid repeated network calls."""
+    # Reset cache before test
+    Service._online_cache = {"is_online": False, "timestamp": 0.0}
+
+    service = Service()
+    with mock.patch.object(Service, "_determine_network_health") as mock_health:
+        from aignostics.utils import Health
+
+        mock_health.return_value = Health(status=Health.Code.UP)
+
+        # First call should hit the network
+        assert service.is_online() is True
+        assert mock_health.call_count == 1
+
+        # Second call within cache duration should use cache
+        assert service.is_online() is True
+        assert mock_health.call_count == 1  # Still 1, not 2
+
+
+def test_is_online_cache_expiration() -> None:
+    """Test that cache expires after the configured duration."""
+    # Reset cache before test
+    Service._online_cache = {"is_online": False, "timestamp": 0.0}
+
+    # Use a very short cache duration for testing
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_ONLINE_CACHE_DURATION": "1"}):
+        service = Service()
+        with mock.patch.object(Service, "_determine_network_health") as mock_health:
+            from aignostics.utils import Health
+
+            mock_health.return_value = Health(status=Health.Code.UP)
+
+            # First call
+            assert service.is_online() is True
+            assert mock_health.call_count == 1
+
+            # Wait for cache to expire
+            time.sleep(1.1)
+
+            # Next call should hit the network again
+            assert service.is_online() is True
+            assert mock_health.call_count == 2
+
+
+def test_is_online_cache_disabled() -> None:
+    """Test that setting cache duration to 0 disables caching."""
+    # Reset cache before test
+    Service._online_cache = {"is_online": False, "timestamp": 0.0}
+
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_ONLINE_CACHE_DURATION": "0"}):
+        service = Service()
+        with mock.patch.object(Service, "_determine_network_health") as mock_health:
+            from aignostics.utils import Health
+
+            mock_health.return_value = Health(status=Health.Code.UP)
+
+            # Each call should hit the network when cache is disabled
+            assert service.is_online() is True
+            assert mock_health.call_count == 1
+
+            assert service.is_online() is True
+            assert mock_health.call_count == 2
+
+
+def test_is_online_shared_cache_across_instances() -> None:
+    """Test that the cache is shared across multiple service instances."""
+    # Reset cache before test
+    Service._online_cache = {"is_online": False, "timestamp": 0.0}
+
+    with mock.patch.object(Service, "_determine_network_health") as mock_health:
+        from aignostics.utils import Health
+
+        mock_health.return_value = Health(status=Health.Code.UP)
+
+        # First instance makes the call
+        service1 = Service()
+        assert service1.is_online() is True
+        assert mock_health.call_count == 1
+
+        # Second instance should use the shared cache
+        service2 = Service()
+        assert service2.is_online() is True
+        assert mock_health.call_count == 1  # Still 1, proving cache is shared

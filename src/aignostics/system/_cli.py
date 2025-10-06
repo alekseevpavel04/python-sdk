@@ -141,6 +141,22 @@ def openapi(
 
 
 @cli.command()
+def online() -> None:
+    """Check if the system is online (has network connectivity).
+
+    Exits with 0 if online (prints green), 1 if offline (prints red).
+    """
+    is_online = _service.is_online()
+
+    if is_online:
+        console.print("[green]Online[/green]")
+        sys.exit(0)
+    else:
+        console.print("[red]Offline[/red]")
+        sys.exit(1)
+
+
+@cli.command()
 def install() -> None:
     """Complete installation."""
     console.print("Installation complete!")
