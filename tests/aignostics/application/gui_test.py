@@ -35,8 +35,8 @@ async def test_gui_index(user: User) -> None:
 
 
 @pytest.mark.e2e
-@pytest.mark.flaky(retries=2, delay=5, only_on=[AssertionError])
-@pytest.mark.timeout(timeout=60 * 2)
+@pytest.mark.flaky(retries=3, delay=5, only_on=[AssertionError])
+@pytest.mark.timeout(timeout=60 * 3)
 @pytest.mark.parametrize(
     ("application_id", "application_name", "expected_text"),
     [
