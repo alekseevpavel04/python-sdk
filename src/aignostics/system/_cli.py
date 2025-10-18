@@ -32,6 +32,7 @@ class OutputFormat(StrEnum):
     This enum defines the possible formats for output data:
     - YAML: Output data in YAML format
     - JSON: Output data in JSON format
+    - HUMAN: Human-readable output format
 
     Usage:
         format = OutputFormat.YAML
@@ -40,6 +41,7 @@ class OutputFormat(StrEnum):
 
     YAML = "yaml"
     JSON = "json"
+    HUMAN = "human"
 
 
 @cli.command()
@@ -172,6 +174,30 @@ def openapi(
 def install() -> None:
     """Complete installation."""
     console.print("Installation complete!")
+
+
+@cli.command()
+def hello(
+    format: Annotated[  # noqa: A002
+        OutputFormat, typer.Option("--format", help="Output format", case_sensitive=False)
+    ] = OutputFormat.HUMAN,
+) -> None:
+    """Print hello greeting with localized time for configured cities.
+
+    Args:
+        format (OutputFormat): Output format (human-readable, JSON, or YAML).
+    """
+    data = _service.hello()
+
+    match format:
+        case OutputFormat.HUMAN:
+            # Human-readable format: "Hello {City}, it's {formatted_time}"
+            for greeting in data["greetings"]:
+                console.print(f"Hello {greeting['city']}, it's {greeting['formatted']}")
+        case OutputFormat.JSON:
+            console.print_json(data=data)
+        case OutputFormat.YAML:
+            console.print(yaml.dump(data, width=80, default_flow_style=False), end="")
 
 
 config_app = typer.Typer()

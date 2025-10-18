@@ -7,11 +7,13 @@ import re
 import ssl
 import sys
 import typing as t
+from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from socket import AF_INET, SOCK_DGRAM, socket
 from typing import Any, ClassVar, NotRequired, TypedDict
 from urllib.request import getproxies
+from zoneinfo import ZoneInfo
 
 import urllib3
 from dotenv import set_key as dotenv_set_key
@@ -606,3 +608,128 @@ class Service(BaseService):
         Service.dotenv_unset("SSL_NO_VERIFY")
         Service.dotenv_unset("REQUESTS_CA_BUNDLE")
         Service.dotenv_unset("CURL_CA_BUNDLE")
+
+    # Mapping of common city names to IANA timezone identifiers
+    CITY_TIMEZONE_MAP: ClassVar[dict[str, str]] = {
+        # Europe
+        "berlin": "Europe/Berlin",
+        "london": "Europe/London",
+        "paris": "Europe/Paris",
+        "amsterdam": "Europe/Amsterdam",
+        "rome": "Europe/Rome",
+        "madrid": "Europe/Madrid",
+        "vienna": "Europe/Vienna",
+        "zurich": "Europe/Zurich",
+        "stockholm": "Europe/Stockholm",
+        "copenhagen": "Europe/Copenhagen",
+        "helsinki": "Europe/Helsinki",
+        "oslo": "Europe/Oslo",
+        "prague": "Europe/Prague",
+        "budapest": "Europe/Budapest",
+        "warsaw": "Europe/Warsaw",
+        "athens": "Europe/Athens",
+        "lisbon": "Europe/Lisbon",
+        "dublin": "Europe/Dublin",
+        "brussels": "Europe/Brussels",
+        # Americas
+        "new york": "America/New_York",
+        "los angeles": "America/Los_Angeles",
+        "chicago": "America/Chicago",
+        "houston": "America/Chicago",
+        "san francisco": "America/Los_Angeles",
+        "boston": "America/New_York",
+        "seattle": "America/Los_Angeles",
+        "miami": "America/New_York",
+        "toronto": "America/Toronto",
+        "vancouver": "America/Vancouver",
+        "montreal": "America/Toronto",
+        "mexico city": "America/Mexico_City",
+        "sao paulo": "America/Sao_Paulo",
+        "rio de janeiro": "America/Sao_Paulo",
+        "buenos aires": "America/Argentina/Buenos_Aires",
+        "santiago": "America/Santiago",
+        "bogota": "America/Bogota",
+        "lima": "America/Lima",
+        # Asia
+        "tokyo": "Asia/Tokyo",
+        "beijing": "Asia/Shanghai",
+        "shanghai": "Asia/Shanghai",
+        "hong kong": "Asia/Hong_Kong",
+        "singapore": "Asia/Singapore",
+        "seoul": "Asia/Seoul",
+        "mumbai": "Asia/Kolkata",
+        "delhi": "Asia/Kolkata",
+        "bangalore": "Asia/Kolkata",
+        "bangkok": "Asia/Bangkok",
+        "jakarta": "Asia/Jakarta",
+        "manila": "Asia/Manila",
+        "dubai": "Asia/Dubai",
+        "tel aviv": "Asia/Jerusalem",
+        "istanbul": "Europe/Istanbul",
+        "riyadh": "Asia/Riyadh",
+        # Oceania
+        "sydney": "Australia/Sydney",
+        "melbourne": "Australia/Melbourne",
+        "brisbane": "Australia/Brisbane",
+        "perth": "Australia/Perth",
+        "auckland": "Pacific/Auckland",
+        # Africa
+        "cairo": "Africa/Cairo",
+        "johannesburg": "Africa/Johannesburg",
+        "lagos": "Africa/Lagos",
+        "nairobi": "Africa/Nairobi",
+        "casablanca": "Africa/Casablanca",
+    }
+
+    @staticmethod
+    def _get_timezone_for_city(city: str) -> str:
+        """Get IANA timezone identifier for a city.
+
+        Args:
+            city (str): City name (case-insensitive).
+
+        Returns:
+            str: IANA timezone identifier.
+
+        Raises:
+            ValueError: If city is not recognized.
+        """
+        city_lower = city.lower()
+        if city_lower not in Service.CITY_TIMEZONE_MAP:
+            available_cities = ", ".join(sorted(set(Service.CITY_TIMEZONE_MAP.keys())))
+            message = f"Unknown city '{city}'. Available cities: {available_cities}"
+            raise ValueError(message)
+        return Service.CITY_TIMEZONE_MAP[city_lower]
+
+    def hello(self) -> dict[str, Any]:
+        """Generate hello greeting with localized time for configured cities.
+
+        Returns:
+            dict[str, Any]: Dictionary with greetings for each city including:
+                - city: City name
+                - timezone: IANA timezone identifier
+                - datetime: ISO 8601 formatted datetime
+                - formatted: Human-readable formatted datetime
+
+        Raises:
+            ValueError: If a configured city is not recognized.
+        """
+        greetings = []
+        now_utc = datetime.now(tz=ZoneInfo("UTC"))
+
+        for city in self._settings.cities:
+            try:
+                timezone_name = self._get_timezone_for_city(city)
+                city_time = now_utc.astimezone(ZoneInfo(timezone_name))
+
+                greetings.append({
+                    "city": city,
+                    "timezone": timezone_name,
+                    "datetime": city_time.isoformat(),
+                    "formatted": city_time.strftime("%A, %B %d, %Y at %I:%M:%S %p %Z"),
+                })
+            except ValueError:
+                logger.exception("Failed to get timezone for city '%s'", city)
+                raise
+
+        return {"greetings": greetings}

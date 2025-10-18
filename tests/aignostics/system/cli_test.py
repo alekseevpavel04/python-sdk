@@ -1,11 +1,13 @@
 """Tests to verify the CLI functionality of the system module."""
 
+import json
 import logging
 import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 from typer.testing import CliRunner
 
 from aignostics.cli import cli
@@ -425,3 +427,96 @@ def test_cli_dump_dot_env_file(runner: CliRunner, silent_logging, tmp_path: Path
 
         # Verify that the token value is present (unmasked in dump)
         assert "AIGNOSTICS_SYSTEM_TOKEN=test_token_value" in content or "AIGNOSTICS_SYSTEM_TOKEN=None" in content
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_default_human_format(runner: CliRunner) -> None:
+    """Check hello command with default human-readable format."""
+    result = runner.invoke(cli, ["system", "hello"])
+    assert result.exit_code == 0
+    assert "Hello Berlin" in result.output
+    assert "Hello New York" in result.output
+    # Should contain day name, month, year format
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    assert any(day in result.output for day in days)
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_json_format(runner: CliRunner) -> None:
+    """Check hello command with JSON format."""
+    result = runner.invoke(cli, ["system", "hello", "--format", "json"])
+    assert result.exit_code == 0
+
+    # Parse JSON output
+    data = json.loads(result.output)
+    assert "greetings" in data
+    assert len(data["greetings"]) == 2
+
+    # Check Berlin greeting
+    berlin = data["greetings"][0]
+    assert berlin["city"] == "Berlin"
+    assert berlin["timezone"] == "Europe/Berlin"
+    assert "datetime" in berlin
+    assert "formatted" in berlin
+
+    # Check New York greeting
+    ny = data["greetings"][1]
+    assert ny["city"] == "New York"
+    assert ny["timezone"] == "America/New_York"
+    assert "datetime" in ny
+    assert "formatted" in ny
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_yaml_format(runner: CliRunner) -> None:
+    """Check hello command with YAML format."""
+    result = runner.invoke(cli, ["system", "hello", "--format", "yaml"])
+    assert result.exit_code == 0
+
+    # Parse YAML output
+    data = yaml.safe_load(result.output)
+    assert "greetings" in data
+    assert len(data["greetings"]) == 2
+
+    # Check Berlin greeting
+    assert data["greetings"][0]["city"] == "Berlin"
+    assert data["greetings"][0]["timezone"] == "Europe/Berlin"
+
+    # Check New York greeting
+    assert data["greetings"][1]["city"] == "New York"
+    assert data["greetings"][1]["timezone"] == "America/New_York"
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_custom_cities(runner: CliRunner) -> None:
+    """Check hello command with custom cities via environment variable."""
+    env = os.environ.copy()
+    env["AIGNOSTICS_SYSTEM_CITIES"] = json.dumps(["Tokyo", "London", "Sydney"])
+
+    result = runner.invoke(cli, ["system", "hello"], env=env)
+    assert result.exit_code == 0
+    assert "Hello Tokyo" in result.output
+    assert "Hello London" in result.output
+    assert "Hello Sydney" in result.output
+    assert "Hello Berlin" not in result.output
+    assert "Hello New York" not in result.output
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_single_city(runner: CliRunner) -> None:
+    """Check hello command with single custom city."""
+    env = os.environ.copy()
+    env["AIGNOSTICS_SYSTEM_CITIES"] = json.dumps(["Paris"])
+
+    result = runner.invoke(cli, ["system", "hello", "--format", "json"], env=env)
+    assert result.exit_code == 0
+
+    data = json.loads(result.output)
+    assert len(data["greetings"]) == 1
+    assert data["greetings"][0]["city"] == "Paris"
+    assert data["greetings"][0]["timezone"] == "Europe/Paris"

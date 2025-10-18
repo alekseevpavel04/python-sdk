@@ -1,5 +1,6 @@
 """Tests of the system service."""
 
+import json
 import os
 from unittest import mock
 
@@ -350,3 +351,90 @@ def test_is_secret_key_real_world_examples() -> None:
 
     for key in non_secret_examples:
         assert not Service._is_secret_key(key), f"Expected '{key}' to NOT be identified as a secret key"
+
+
+@pytest.mark.unit
+def test_get_timezone_for_city() -> None:
+    """Test timezone lookup for cities."""
+    # Test successful lookups
+    assert Service._get_timezone_for_city("Berlin") == "Europe/Berlin"
+    assert Service._get_timezone_for_city("berlin") == "Europe/Berlin"
+    assert Service._get_timezone_for_city("BERLIN") == "Europe/Berlin"
+    assert Service._get_timezone_for_city("New York") == "America/New_York"
+    assert Service._get_timezone_for_city("new york") == "America/New_York"
+    assert Service._get_timezone_for_city("Tokyo") == "Asia/Tokyo"
+    assert Service._get_timezone_for_city("London") == "Europe/London"
+
+    # Test unknown city
+    with pytest.raises(ValueError, match="Unknown city"):
+        Service._get_timezone_for_city("NonExistentCity")
+
+
+@pytest.mark.unit
+def test_hello_default_cities() -> None:
+    """Test hello method with default cities (Berlin and New York)."""
+    service = Service()
+    result = service.hello()
+
+    assert "greetings" in result
+    assert len(result["greetings"]) == 2
+
+    # Check Berlin greeting
+    berlin_greeting = result["greetings"][0]
+    assert berlin_greeting["city"] == "Berlin"
+    assert berlin_greeting["timezone"] == "Europe/Berlin"
+    assert "datetime" in berlin_greeting
+    assert "formatted" in berlin_greeting
+    assert berlin_greeting["formatted"]  # Should not be empty
+
+    # Check New York greeting
+    ny_greeting = result["greetings"][1]
+    assert ny_greeting["city"] == "New York"
+    assert ny_greeting["timezone"] == "America/New_York"
+    assert "datetime" in ny_greeting
+    assert "formatted" in ny_greeting
+    assert ny_greeting["formatted"]  # Should not be empty
+
+
+@pytest.mark.unit
+def test_hello_custom_cities() -> None:
+    """Test hello method with custom cities."""
+    cities_json = json.dumps(["Tokyo", "London", "Sydney"])
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_CITIES": cities_json}):
+        service = Service()
+        result = service.hello()
+
+        assert "greetings" in result
+        assert len(result["greetings"]) == 3
+
+        cities = [g["city"] for g in result["greetings"]]
+        assert cities == ["Tokyo", "London", "Sydney"]
+
+        timezones = [g["timezone"] for g in result["greetings"]]
+        assert timezones == ["Asia/Tokyo", "Europe/London", "Australia/Sydney"]
+
+
+@pytest.mark.unit
+def test_hello_single_city() -> None:
+    """Test hello method with a single city."""
+    cities_json = json.dumps(["Paris"])
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_CITIES": cities_json}):
+        service = Service()
+        result = service.hello()
+
+        assert "greetings" in result
+        assert len(result["greetings"]) == 1
+
+        greeting = result["greetings"][0]
+        assert greeting["city"] == "Paris"
+        assert greeting["timezone"] == "Europe/Paris"
+
+
+@pytest.mark.unit
+def test_hello_invalid_city() -> None:
+    """Test hello method with an invalid city raises ValueError."""
+    cities_json = json.dumps(["InvalidCity"])
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_CITIES": cities_json}):
+        service = Service()
+        with pytest.raises(ValueError, match="Unknown city"):
+            service.hello()
