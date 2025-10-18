@@ -69,7 +69,7 @@ jobs:
           claude_args: >-
             --max-turns 200
             --model claude-sonnet-4-5-20250929
-            --allowed-tools "mcp__github_inline_comment__create_inline_comment,Read,Write,Edit,MultiEdit,Glob,Grep,LS,WebFetch,WebSearch,Bash(git:*),Bash(bun:*),Bash(npm:*),Bash(npx:*),Bash(gh:*),Read,Edit(**.md)"
+            --allowed-tools "mcp__github_inline_comment__create_inline_comment,Read,Write,Edit,MultiEdit,Glob,Grep,LS,WebFetch,WebSearch,Bash(git:*),Bash(bun:*),Bash(npm:*),Bash(npx:*),Bash(gh:*),Bash(uv:*),Bash(make:*)"
             --system-prompt "Enable the contributor while insisting on highest standards:
             * Apply best practices in enterprise grade software engineering.
             * Use the repository's CLAUDE.md and recursively referenced documents for guidance on style and conventions.
