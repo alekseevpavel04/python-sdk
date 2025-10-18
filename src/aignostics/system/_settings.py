@@ -29,3 +29,11 @@ class Settings(OpaqueSettings):
             default=None,
         ),
     ]
+
+    hello_cities: Annotated[
+        list[str],
+        Field(
+            description="List of cities to display in the hello command with their local times",
+            default=["Berlin", "New York"],
+        ),
+    ]

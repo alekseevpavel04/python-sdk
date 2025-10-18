@@ -7,11 +7,13 @@ import re
 import ssl
 import sys
 import typing as t
+from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from socket import AF_INET, SOCK_DGRAM, socket
 from typing import Any, ClassVar, NotRequired, TypedDict
 from urllib.request import getproxies
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import urllib3
 from dotenv import set_key as dotenv_set_key
@@ -606,3 +608,60 @@ class Service(BaseService):
         Service.dotenv_unset("SSL_NO_VERIFY")
         Service.dotenv_unset("REQUESTS_CA_BUNDLE")
         Service.dotenv_unset("CURL_CA_BUNDLE")
+
+    # Mapping of city names to IANA timezone identifiers
+    CITY_TIMEZONES: ClassVar[dict[str, str]] = {
+        "Berlin": "Europe/Berlin",
+        "New York": "America/New_York",
+        "London": "Europe/London",
+        "Tokyo": "Asia/Tokyo",
+        "Sydney": "Australia/Sydney",
+        "Paris": "Europe/Paris",
+        "Los Angeles": "America/Los_Angeles",
+        "Chicago": "America/Chicago",
+        "Hong Kong": "Asia/Hong_Kong",
+        "Singapore": "Asia/Singapore",
+        "Dubai": "Asia/Dubai",
+        "Mumbai": "Asia/Kolkata",
+        "São Paulo": "America/Sao_Paulo",
+        "Toronto": "America/Toronto",
+        "Mexico City": "America/Mexico_City",
+    }
+
+    def hello(self) -> dict[str, Any]:
+        """Generate hello message with current time in configured cities.
+
+        Returns:
+            dict[str, Any]: Dictionary with city names as keys and formatted times as values.
+
+        Raises:
+            ValueError: If a configured city is not in the known timezones mapping.
+        """
+        cities = self._settings.hello_cities
+        result: dict[str, Any] = {}
+
+        for city in cities:
+            if city not in self.CITY_TIMEZONES:
+                logger.warning("City '%s' not found in timezone mapping", city)
+                result[city] = {"error": f"Unknown city: {city}"}
+                continue
+
+            timezone_str = self.CITY_TIMEZONES[city]
+            try:
+                tz = ZoneInfo(timezone_str)
+                now = datetime.now(tz)
+
+                # Format with localized date and time
+                # Using strftime with appropriate format for each locale
+                formatted_time = now.strftime("%A, %B %d, %Y at %I:%M:%S %p %Z")
+
+                result[city] = {
+                    "datetime": now.isoformat(),
+                    "formatted": formatted_time,
+                    "timezone": timezone_str,
+                }
+            except ZoneInfoNotFoundError:
+                logger.exception("Timezone '%s' not found for city '%s'", timezone_str, city)
+                result[city] = {"error": f"Timezone not found: {timezone_str}"}
+
+        return result

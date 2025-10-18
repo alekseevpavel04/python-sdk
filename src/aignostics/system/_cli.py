@@ -32,6 +32,7 @@ class OutputFormat(StrEnum):
     This enum defines the possible formats for output data:
     - YAML: Output data in YAML format
     - JSON: Output data in JSON format
+    - HUMAN: Output data in human-readable format
 
     Usage:
         format = OutputFormat.YAML
@@ -40,6 +41,7 @@ class OutputFormat(StrEnum):
 
     YAML = "yaml"
     JSON = "json"
+    HUMAN = "human"
 
 
 @cli.command()
@@ -172,6 +174,38 @@ def openapi(
 def install() -> None:
     """Complete installation."""
     console.print("Installation complete!")
+
+
+@cli.command()
+def hello(
+    output_format: Annotated[
+        OutputFormat, typer.Option("--format", help="Output format", case_sensitive=False)
+    ] = OutputFormat.HUMAN,
+) -> None:
+    """Print hello message with current time in configured cities.
+
+    Args:
+        output_format (OutputFormat): Output format (HUMAN, JSON, or YAML).
+    """
+    result = _service.hello()
+
+    match output_format:
+        case OutputFormat.HUMAN:
+            # Human-readable format
+            greetings = []
+            for city, data in result.items():
+                if isinstance(data, dict) and "error" in data:
+                    greetings.append(f"Hello {city}, {data['error']}")
+                elif isinstance(data, dict) and "formatted" in data:
+                    greetings.append(f"Hello {city}, it's {data['formatted']}")
+                else:
+                    greetings.append(f"Hello {city}")
+
+            console.print(". ".join(greetings) + ".")
+        case OutputFormat.JSON:
+            console.print_json(data=result)
+        case OutputFormat.YAML:
+            console.print(yaml.dump(result, width=80, default_flow_style=False), end="")
 
 
 config_app = typer.Typer()
