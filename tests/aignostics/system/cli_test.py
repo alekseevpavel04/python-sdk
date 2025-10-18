@@ -152,6 +152,14 @@ def test_cli_install(runner: CliRunner) -> None:
 
 
 @pytest.mark.integration
+def test_cli_hello(runner: CliRunner) -> None:
+    """Check hello command prints 'world'."""
+    result = runner.invoke(cli, ["system", "hello"])
+    assert result.exit_code == 0
+    assert "world" in result.output
+
+
+@pytest.mark.integration
 @pytest.mark.sequential
 def test_cli_set_unset_get(runner: CliRunner, silent_logging, tmp_path) -> None:
     """Check set, unset, and get commands."""
