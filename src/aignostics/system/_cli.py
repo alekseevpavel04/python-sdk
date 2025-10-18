@@ -174,6 +174,12 @@ def install() -> None:
     console.print("Installation complete!")
 
 
+@cli.command()
+def hello() -> None:
+    """Print world."""
+    console.print("world")
+
+
 config_app = typer.Typer()
 cli.add_typer(config_app, name="config", help="Configure application settings.")
 
