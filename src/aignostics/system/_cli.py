@@ -174,6 +174,40 @@ def install() -> None:
     console.print("Installation complete!")
 
 
+@cli.command()
+def hello(
+    output_format: Annotated[
+        str,
+        typer.Option(
+            help="Output format: 'human' for human-readable, 'json' for JSON, 'yaml' for YAML",
+            case_sensitive=False,
+        ),
+    ] = "human",
+) -> None:
+    """Print greetings for configured cities with current local time.
+
+    Args:
+        output_format (str): Output format - 'human', 'json', or 'yaml'.
+    """
+    greetings = _service.generate_greeting()
+
+    format_lower = output_format.lower()
+    if format_lower == "human":
+        # Human-readable format - print greeting strings joined by periods
+        greeting_texts = [info["greeting"] for info in greetings.values()]
+        output = ". ".join(greeting_texts) + "."
+        console.print(output)
+    elif format_lower == "json":
+        # JSON format
+        console.print_json(data=greetings)
+    elif format_lower == "yaml":
+        # YAML format
+        console.print(yaml.dump(greetings, width=80, default_flow_style=False), end="")
+    else:
+        console.print(f"[bold red]Error:[/] Invalid format '{output_format}'. Use 'human', 'json', or 'yaml'.")
+        sys.exit(1)
+
+
 config_app = typer.Typer()
 cli.add_typer(config_app, name="config", help="Configure application settings.")
 

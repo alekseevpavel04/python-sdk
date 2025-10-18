@@ -425,3 +425,48 @@ def test_cli_dump_dot_env_file(runner: CliRunner, silent_logging, tmp_path: Path
 
         # Verify that the token value is present (unmasked in dump)
         assert "AIGNOSTICS_SYSTEM_TOKEN=test_token_value" in content or "AIGNOSTICS_SYSTEM_TOKEN=None" in content
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_human(runner: CliRunner) -> None:
+    """Test hello command with human-readable output (default)."""
+    result = runner.invoke(cli, ["system", "hello"])
+    assert result.exit_code == 0
+    assert "Hello Berlin" in result.output
+    assert "Hello New York" in result.output
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_json(runner: CliRunner) -> None:
+    """Test hello command with JSON output."""
+    result = runner.invoke(cli, ["system", "hello", "--output-format", "json"])
+    assert result.exit_code == 0
+    # Check for JSON structure
+    assert '"Berlin"' in result.output or "'Berlin'" in result.output
+    assert '"New York"' in result.output or "'New York'" in result.output
+    assert "timezone" in result.output
+    assert "greeting" in result.output
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_yaml(runner: CliRunner) -> None:
+    """Test hello command with YAML output."""
+    result = runner.invoke(cli, ["system", "hello", "--output-format", "yaml"])
+    assert result.exit_code == 0
+    # Check for YAML structure
+    assert "Berlin:" in result.output
+    assert "New York:" in result.output
+    assert "timezone:" in result.output
+    assert "greeting:" in result.output
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(timeout=30)
+def test_cli_hello_invalid_format(runner: CliRunner) -> None:
+    """Test hello command with invalid format."""
+    result = runner.invoke(cli, ["system", "hello", "--output-format", "invalid"])
+    assert result.exit_code == 1
+    assert "Invalid format" in result.output

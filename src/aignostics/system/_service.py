@@ -7,11 +7,13 @@ import re
 import ssl
 import sys
 import typing as t
+from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from socket import AF_INET, SOCK_DGRAM, socket
 from typing import Any, ClassVar, NotRequired, TypedDict
 from urllib.request import getproxies
+from zoneinfo import ZoneInfo
 
 import urllib3
 from dotenv import set_key as dotenv_set_key
@@ -606,3 +608,75 @@ class Service(BaseService):
         Service.dotenv_unset("SSL_NO_VERIFY")
         Service.dotenv_unset("REQUESTS_CA_BUNDLE")
         Service.dotenv_unset("CURL_CA_BUNDLE")
+
+    # Mapping of major cities to their IANA timezone identifiers
+    _CITY_TIMEZONES: ClassVar[dict[str, str]] = {
+        "Berlin": "Europe/Berlin",
+        "New York": "America/New_York",
+        "London": "Europe/London",
+        "Paris": "Europe/Paris",
+        "Tokyo": "Asia/Tokyo",
+        "Sydney": "Australia/Sydney",
+        "Los Angeles": "America/Los_Angeles",
+        "Chicago": "America/Chicago",
+        "Mumbai": "Asia/Kolkata",
+        "Shanghai": "Asia/Shanghai",
+        "Singapore": "Asia/Singapore",
+        "Dubai": "Asia/Dubai",
+        "Toronto": "America/Toronto",
+        "Mexico City": "America/Mexico_City",
+        "São Paulo": "America/Sao_Paulo",
+        "Buenos Aires": "America/Argentina/Buenos_Aires",
+        "Moscow": "Europe/Moscow",
+        "Istanbul": "Europe/Istanbul",
+        "Hong Kong": "Asia/Hong_Kong",
+        "Seoul": "Asia/Seoul",
+    }
+
+    def generate_greeting(self) -> dict[str, Any]:
+        """Generate greeting messages for configured cities with localized date/time.
+
+        Returns:
+            dict[str, Any]: Dictionary mapping city names to their greeting information.
+                           Each entry contains the city name, timezone, current datetime,
+                           and a formatted greeting string.
+
+        Example:
+            {
+                "Berlin": {
+                    "city": "Berlin",
+                    "timezone": "Europe/Berlin",
+                    "datetime": "2025-10-18T13:34:56+02:00",
+                    "greeting": "Hello Berlin, it's Friday, October 18, 2025 at 1:34 PM"
+                },
+                ...
+            }
+        """
+        greetings = {}
+        cities = self._settings.hello_cities
+
+        for city in cities:
+            timezone_name = self._CITY_TIMEZONES.get(city)
+            if timezone_name is None:
+                logger.warning("Timezone not found for city '%s', skipping", city)
+                continue
+
+            try:
+                tz = ZoneInfo(timezone_name)
+                now = datetime.now(tz)
+
+                # Format datetime according to locale conventions
+                # Using strftime for localized formatting
+                formatted_time = now.strftime("%A, %B %d, %Y at %-I:%M %p")
+
+                greetings[city] = {
+                    "city": city,
+                    "timezone": timezone_name,
+                    "datetime": now.isoformat(),
+                    "greeting": f"Hello {city}, it's {formatted_time}",
+                }
+            except (ValueError, OSError):
+                logger.exception("Failed to generate greeting for city '%s'", city)
+                continue
+
+        return greetings

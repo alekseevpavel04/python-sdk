@@ -29,3 +29,11 @@ class Settings(OpaqueSettings):
             default=None,
         ),
     ]
+
+    hello_cities: Annotated[
+        list[str],
+        Field(
+            description="List of cities to greet in the hello command",
+            default=["Berlin", "New York"],
+        ),
+    ]

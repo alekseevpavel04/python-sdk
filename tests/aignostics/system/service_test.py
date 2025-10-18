@@ -9,6 +9,76 @@ from aignostics.system._service import Service
 
 
 @pytest.mark.unit
+def test_generate_greeting_default_cities() -> None:
+    """Test that generate_greeting works with default cities (Berlin and New York)."""
+    service = Service()
+    greetings = service.generate_greeting()
+
+    # Check that we get greetings for both default cities
+    assert "Berlin" in greetings
+    assert "New York" in greetings
+
+    # Check structure of greeting for Berlin
+    berlin = greetings["Berlin"]
+    assert berlin["city"] == "Berlin"
+    assert berlin["timezone"] == "Europe/Berlin"
+    assert "datetime" in berlin
+    assert "greeting" in berlin
+    assert berlin["greeting"].startswith("Hello Berlin, it's")
+
+    # Check structure of greeting for New York
+    ny = greetings["New York"]
+    assert ny["city"] == "New York"
+    assert ny["timezone"] == "America/New_York"
+    assert "datetime" in ny
+    assert "greeting" in ny
+    assert ny["greeting"].startswith("Hello New York, it's")
+
+
+@pytest.mark.unit
+def test_generate_greeting_custom_cities() -> None:
+    """Test that generate_greeting works with custom cities from settings."""
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_HELLO_CITIES": '["Tokyo", "London"]'}):
+        service = Service()
+        greetings = service.generate_greeting()
+
+        # Check that we get greetings for the custom cities
+        assert "Tokyo" in greetings
+        assert "London" in greetings
+
+        # Verify the timezone mappings
+        assert greetings["Tokyo"]["timezone"] == "Asia/Tokyo"
+        assert greetings["London"]["timezone"] == "Europe/London"
+
+
+@pytest.mark.unit
+def test_generate_greeting_unknown_city() -> None:
+    """Test that generate_greeting handles unknown cities gracefully."""
+    with mock.patch.dict(os.environ, {"AIGNOSTICS_SYSTEM_HELLO_CITIES": '["UnknownCity", "Berlin"]'}):
+        service = Service()
+        greetings = service.generate_greeting()
+
+        # Unknown city should be skipped
+        assert "UnknownCity" not in greetings
+
+        # Berlin should still work
+        assert "Berlin" in greetings
+
+
+@pytest.mark.unit
+def test_generate_greeting_datetime_format() -> None:
+    """Test that datetime is properly formatted in ISO format."""
+    service = Service()
+    greetings = service.generate_greeting()
+
+    for info in greetings.values():
+        # Check that datetime contains timezone info (ends with +HH:MM or -HH:MM)
+        assert "+" in info["datetime"] or "-" in info["datetime"].split("T")[1]
+        # Check ISO format (should contain 'T' separator)
+        assert "T" in info["datetime"]
+
+
+@pytest.mark.unit
 @pytest.mark.timeout(15)
 def test_is_token_valid() -> None:
     """Test that is_token_valid works correctly with environment variable."""
