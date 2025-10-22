@@ -15,7 +15,7 @@ TIMEOUT = 60  # 1 minutes
 
 
 class Service(BaseService):
-    """Service of the application module."""
+    """Service of the wsi module."""
 
     def info(self, mask_secrets: bool = True) -> dict[str, Any]:  # noqa: ARG002, PLR6301
         """Determine info of this service.
