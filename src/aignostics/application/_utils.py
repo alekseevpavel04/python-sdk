@@ -104,9 +104,7 @@ def _retrieve_and_print_run_items(run: Run) -> None:
         console.print(f"  [bold]Status (Termination Reason):[/bold] {item.state.value} ({item.termination_reason})")
         console.print(f"  [bold]Error Message (Code):[/bold] {item.error_message} ({item.error_code})")
 
-        # TODO(Andreas): error_code is missing on item model; should be printed here as well.
-        # Please add in the openapi.json and regenerate the SDK, and add line here.
-        # Can be set to generic code initially so we have a stable API at last.
+        # Note: error_code is now included in the API model and displayed above
         if item.error_message:
             console.print(f"  [error]Error:[/error] {item.error_message}")
 
