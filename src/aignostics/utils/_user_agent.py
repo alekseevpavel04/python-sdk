@@ -29,9 +29,19 @@ def user_agent() -> str:
 
     optional_suffix = "; " + "; ".join(optional_parts) if optional_parts else ""
 
-    # TODO(Helmut): Find a way to not hard code python-sdk here.
-    # Format: {project}/{version} ({platform}; {repository}; {optional_parts})
-    base_info = f"{__project_name__}-python-sdk/{__version_full__}"
+    # Get SDK language suffix from package metadata or use fallback
+    try:
+        from importlib.metadata import metadata
+
+        pkg_metadata = metadata(__project_name__)
+        # Extract language from package name or use default
+        sdk_lang = pkg_metadata.get("Name", "").replace(__project_name__, "").strip("-") or "python-sdk"
+    except Exception:
+        # Fallback to hardcoded value if metadata unavailable
+        sdk_lang = "python-sdk"
+
+    # Format: {project}-{language}/{version} ({platform}; {repository}; {optional_parts})
+    base_info = f"{__project_name__}-{sdk_lang}/{__version_full__}"
     system_info = f"{platform.platform()}; +{__repository_url__}{optional_suffix}"
 
     return f"{base_info} ({system_info})"
