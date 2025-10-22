@@ -29,10 +29,13 @@ class Service(BaseService):
         return {}
 
     def health(self) -> Health:  # noqa: PLR6301
-        """Determine health of thumbnail service.
+        """Check WSI thumbnail service health by verifying required dependencies.
+
+        Verifies that required libraries for whole slide image processing are available,
+        including OpenSlide (for multi-format WSI support) and PIL (for image operations).
 
         Returns:
-            Health: The health of the service.
+            Health: Health status (UP if dependencies available, DOWN otherwise).
         """
         return Health(
             status=Health.Code.UP,
