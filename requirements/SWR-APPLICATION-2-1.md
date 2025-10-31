@@ -7,4 +7,4 @@ Requirement type: FUNCTIONAL
 Layer: System (backend logic)
 ---
 
-System shall validate that slide metadata contains all required fields for application processing.
+System shall validate that slide metadata contains all required fields for application processing, including mandatory user-provided medical metadata and system-derived technical file metadata.

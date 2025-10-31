@@ -7,4 +7,4 @@ Requirement type: ENVIRONMENT
 
 ## Description
 
-Users shall be able to execute AI applications on their data by preparing data, submitting runs, monitoring run status, managing run lifecycle including cancellation, and accessing results.
+Users shall be able to execute AI applications on their data by submitting runs with slide metadata, monitoring run status, and managing run lifecycle including cancellation.

@@ -7,4 +7,4 @@ Requirement type: FUNCTIONAL
 Layer: System (backend logic)
 ---
 
-System shall upload slide files from local storage to platform cloud storage using metadata file references. The system shall complete upload operations successfully when files exist and metadata is valid, and shall provide upload completion confirmation to users.
+System shall upload slide files from local storage to platform cloud storage. The system shall complete upload operations successfully when files exist and metadata is valid, and shall provide upload completion confirmation to users.

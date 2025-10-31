@@ -6,4 +6,4 @@ itemType: Requirement
 Requirement type: FUNCTIONAL
 Layer: User Interface (frontend)
 ---
-System shall display all items included in an application run showing thumbnail images, custom item names when provided otherwise filenames, custom item descriptions when provided, and file paths.
+The UI shall display all items included in an application run showing thumbnail images, custom item names when provided otherwise filenames, file paths, and item tags when provided.
