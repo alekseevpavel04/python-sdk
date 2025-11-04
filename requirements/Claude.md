@@ -21,7 +21,7 @@ Before reading content, create an inventory:
 4. Note the guidance document location
 
 **Phase 1: Familiarization (autonomous)**
-1. read the guidance document "2_Guidance for Requirements Engineering" on how we write requirements and how we document the development in ketryx in general.
+1. read the guidance document "guidance_for_requirements_engineering_exported_oct25_public_version" on how we write requirements and how we document the development in ketryx in general.
 2. read all existing requirements (.md files) in the requirements/ folder
 3. read all existing specifications (.md files) in the specifications/ folder
 
