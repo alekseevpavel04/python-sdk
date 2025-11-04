@@ -7,4 +7,4 @@ Requirement type: FUNCTIONAL
 Layer: System (backend logic)
 ---
 
-System shall download application run results at multiple granularity levels: all items per run, individual items, and individual artifacts per item. The system shall download to specified destination directories when requested by run identifier, retrieve results regardless of run status, and provide download confirmation with status information indicating whether run was completed or canceled.
+System shall download application run results at multiple granularity levels: all items per run, individual items, and individual artifacts per item. The system shall download to specified destination directories when requested by run identifier, retrieve results regardless of run status, and provide download confirmation with status information indicating whether run was completed or canceled. The system shall support download regardless of whether input items are stored in organization bucket, external cloud storage, or web servers.

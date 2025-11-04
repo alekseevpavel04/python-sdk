@@ -6,4 +6,4 @@ itemType: Requirement
 Requirement type: FUNCTIONAL
 Layer: System (backend logic)
 ---
-System shall poll application run status at regular intervals and shall detect when runs reach completed status.
+System shall poll application run status at regular intervals, shall detect when runs reach terminated status, and shall notify users of status changes.

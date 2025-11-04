@@ -6,5 +6,4 @@ itemType: Requirement
 Requirement type: FUNCTIONAL
 Layer: System
 ---
-System shall provide a list of application runs showing run status, application name, and 
-submission timestamp for each run.
+System shall provide a list of application runs showing run status, application name, and submission timestamp for each run. The GUI shall support scrollable display when the number of runs exceeds the visible area.

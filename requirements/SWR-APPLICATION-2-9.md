@@ -7,4 +7,4 @@ Requirement type: FUNCTIONAL
 Layer: System (backend logic)
 ---
 
-System shall poll and update application run status when users navigate to the main screen or explicitly request status updates.
+System shall poll and update application run status automatically at regular intervals when the application GUI is active, and when users navigate to the main screen or explicitly request status updates.
