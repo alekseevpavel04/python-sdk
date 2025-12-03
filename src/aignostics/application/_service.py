@@ -246,9 +246,11 @@ class Service(BaseService):  # noqa: PLR0904
             NotFoundException: If the application with the given ID is not found.
         """
         # TODO(Andreas): Have to make calls for all application versions to construct
-        # Changelog dialog on run describe page.
-        # Can be optimized to one call if API would support it.
-        # Let's discuss if we should re-add the endpoint that existed.
+        #   changelog dialog on run describe page.
+        #   Priority: Medium - Performance optimization for GUI
+        #   Impact: High - N API calls instead of 1 for version changelog
+        #   Effort: Low - API endpoint needs to be re-added (previously existed)
+        #   Action: Discuss with API team about restoring bulk versions endpoint
         try:
             client = self._get_platform_client()
             return [
@@ -362,6 +364,9 @@ class Service(BaseService):  # noqa: PLR0904
         logger.trace("Generating metadata from source directory: {}", source_directory)
 
         # TODO(Helmut): Use it
+        #   Priority: Low - Variable currently unused but validates version exists
+        #   Impact: Minimal - Code cleanup, no functionality affected
+        #   Effort: Low - Either use the result or remove the call
         _ = Service().application_version(application_id, application_version)
 
         metadata = []

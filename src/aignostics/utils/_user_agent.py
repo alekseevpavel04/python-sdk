@@ -30,6 +30,9 @@ def user_agent() -> str:
     optional_suffix = "; " + "; ".join(optional_parts) if optional_parts else ""
 
     # TODO(Helmut): Find a way to not hard code python-sdk here.
+    #   Priority: Low - Cosmetic improvement, does not affect functionality
+    #   Impact: Minimal - Only affects user agent string format
+    #   Effort: Medium - Requires refactoring constants module structure
     # Format: {project}/{version} ({platform}; {repository}; {optional_parts})
     base_info = f"{__project_name__}-python-sdk/{__version_full__}"
     system_info = f"{platform.platform()}; +{__repository_url__}{optional_suffix}"
