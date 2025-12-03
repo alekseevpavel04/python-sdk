@@ -539,6 +539,34 @@ async def _page_application_run_describe(run_id: str) -> None:  # noqa: C901, PL
         ui.navigate.reload()  # TODO(Helmut): Find out why this workaround works. Was just a hunch ...
 
     if run_data:  # noqa: PLR1702
+        # Display queue position at the top for pending/processing runs
+        user_info: UserInfo | None = app.storage.tab.get("user_info", None)
+        is_aignostics_user = (
+            user_info
+            and user_info.organization
+            and user_info.organization.name
+            and user_info.organization.name.lower() in {"aignostics", "pre-alpha-org", "lmu", "charite"}
+        )
+
+        if run_data.state is not RunState.TERMINATED:
+            # Show queue position info for non-terminated runs
+            queue_info_parts = []
+            if run_data.num_preceding_items_org is not None:
+                queue_info_parts.append(("Organization Queue", run_data.num_preceding_items_org))
+            if is_aignostics_user and run_data.num_preceding_items_platform is not None:
+                queue_info_parts.append(("Platform Queue", run_data.num_preceding_items_platform))
+
+            if queue_info_parts:
+                with ui.card().classes("w-full bg-blue-50 mb-4").mark("CARD_QUEUE_POSITION"):
+                    with ui.row().classes("w-full items-center gap-4"):
+                        ui.icon("schedule", color="blue").classes("text-2xl")
+                        ui.label("Queue Position").classes("text-lg font-semibold text-blue-800")
+                    with ui.row().classes("w-full gap-8 mt-2"):
+                        for label, count in queue_info_parts:
+                            with ui.column().classes("items-center"):
+                                ui.label(str(count)).classes("text-3xl font-bold text-blue-600")
+                                ui.label(f"{label}: items ahead").classes("text-sm text-gray-600")
+
         with ui.row().classes("w-full justify-center"):
             expansion = ui.expansion(text=f"Run {run.run_id}", icon="info")
             expansion.on_value_change(
@@ -577,7 +605,6 @@ async def _page_application_run_describe(run_id: str) -> None:  # noqa: C901, PL
                     """,
                     language="markdown",
                 ).classes("full-width").mark("CODE_RUN_METADATA")
-                user_info: UserInfo | None = app.storage.tab.get("user_info", None)
                 if run_data.custom_metadata:
                     is_editable = user_info and user_info.role in {"admin", "super_admin"}
                     properties = {

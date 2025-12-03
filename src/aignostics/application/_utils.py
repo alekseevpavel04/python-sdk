@@ -225,11 +225,41 @@ def _format_run_statistics(statistics: RunItemStatistics) -> str:
     )
 
 
-def _format_run_details(run: RunData) -> str:
+def _format_queue_position(
+    run: RunData,
+    is_aignostics_user: bool = False,
+) -> str:
+    """Format queue position information for a run.
+
+    Only shows queue position for runs that are not yet terminated.
+    For Aignostics users, shows both org and platform-level queue positions.
+    For other users, only shows org-level queue position.
+
+    Args:
+        run (RunData): Run data containing queue position info
+        is_aignostics_user (bool): Whether the current user belongs to Aignostics organization
+
+    Returns:
+        str: Formatted queue position string, empty if run is terminated or no queue info available
+    """
+    if run.state == RunState.TERMINATED:
+        return ""
+
+    parts = []
+    if run.num_preceding_items_org is not None:
+        parts.append(f"[bold]Queue Position (Organization):[/bold] {run.num_preceding_items_org} items ahead")
+    if is_aignostics_user and run.num_preceding_items_platform is not None:
+        parts.append(f"[bold]Queue Position (Platform):[/bold] {run.num_preceding_items_platform} items ahead")
+
+    return "\n".join(parts) + "\n" if parts else ""
+
+
+def _format_run_details(run: RunData, is_aignostics_user: bool = False) -> str:
     """Format detailed run information as a single string.
 
     Args:
         run (RunData): Run data to format
+        is_aignostics_user (bool): Whether the current user belongs to Aignostics organization
 
     Returns:
         str: Formatted run details
@@ -237,7 +267,10 @@ def _format_run_details(run: RunData) -> str:
     status_str = _format_status_string(run.state, run.termination_reason)
     duration_str = _format_duration_string(run.submitted_at, run.terminated_at)
 
-    output = (
+    # Start with queue position if applicable (shown at top for pending/processing runs)
+    queue_position_str = _format_queue_position(run, is_aignostics_user)
+
+    output = queue_position_str + (
         f"[bold]Run ID:[/bold] {run.run_id}\n"
         f"[bold]Application (Version):[/bold] {run.application_id} ({run.version_number})\n"
         f"[bold]Status (Termination Reason):[/bold] {status_str}\n"
@@ -258,6 +291,29 @@ def _format_run_details(run: RunData) -> str:
     return output
 
 
+def _is_aignostics_user() -> bool:
+    """Check if the current user belongs to Aignostics organization.
+
+    Returns:
+        bool: True if user is from Aignostics, pre-alpha-org, lmu, or charite organizations
+    """
+    try:
+        from aignostics.platform import Service as PlatformService  # noqa: PLC0415
+
+        user_info = PlatformService.get_user_info()
+        if (
+            user_info
+            and user_info.organization
+            and user_info.organization.name
+            and user_info.organization.name.lower() in {"aignostics", "pre-alpha-org", "lmu", "charite"}
+        ):
+            return True
+    except Exception:
+        # Silently fail - user info may not be available in all contexts
+        logger.trace("Could not determine user organization for queue position display")
+    return False
+
+
 def retrieve_and_print_run_details(run_handle: Run) -> None:
     """Retrieve and print detailed information about a run.
 
@@ -266,8 +322,14 @@ def retrieve_and_print_run_details(run_handle: Run) -> None:
 
     """
     run = run_handle.details()
+    is_aignostics_user = _is_aignostics_user()
 
-    output = f"[bold]Run Details for {run.run_id}[/bold]\n{'=' * 80}\n{_format_run_details(run)}\n\n[bold]Items:[/bold]"
+    output = (
+        f"[bold]Run Details for {run.run_id}[/bold]\n"
+        f"{'=' * 80}\n"
+        f"{_format_run_details(run, is_aignostics_user)}\n\n"
+        f"[bold]Items:[/bold]"
+    )
 
     console.print(output)
     _retrieve_and_print_run_items(run_handle)
@@ -314,10 +376,11 @@ def print_runs_verbose(runs: list[RunData]) -> None:
         runs (list[RunData]): List of run data
 
     """
+    is_aignostics_user = _is_aignostics_user()
     output = f"[bold]Application Runs:[/bold]\n{'=' * 80}"
 
     for run in runs:
-        output += f"\n{_format_run_details(run)}\n{'-' * 80}"
+        output += f"\n{_format_run_details(run, is_aignostics_user)}\n{'-' * 80}"
 
     console.print(output)
 
