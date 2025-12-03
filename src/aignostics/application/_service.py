@@ -67,24 +67,43 @@ APPLICATION_RUN_UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1MB
 
 
 class Service(BaseService):  # noqa: PLR0904
-    """Service of the application module."""
+    """Application orchestration service providing high-level ML workflow management.
+
+    This service coordinates application runs across the Aignostics Platform, managing:
+    - Run lifecycle (submit, monitor, complete)
+    - File upload/download with progress tracking
+    - Version management with semantic versioning
+    - QuPath integration for WSI visualization (when ijson available)
+    - SDK metadata attachment for run tracking
+    """
 
     _settings: Settings
     _client: Client | None = None
     _platform_service: PlatformService | None = None
 
     def __init__(self) -> None:
-        """Initialize service."""
+        """Initialize application service with settings and platform client.
+
+        Automatically loads and validates settings from environment/config.
+        Initializes connections to platform, WSI, bucket, and QuPath services.
+        """
         super().__init__(Settings)  # automatically loads and validates the settings
 
     def info(self, mask_secrets: bool = True) -> dict[str, Any]:  # noqa: ARG002, PLR6301
-        """Determine info of this service.
+        """Get application service information and configuration status.
+
+        Returns service metadata including available integrations (QuPath),
+        configured endpoints, and operational settings.
 
         Args:
-            mask_secrets (bool): If True, mask sensitive information in the output.
+            mask_secrets: If True, masks sensitive configuration values (API keys, tokens).
+                         Default True for security.
 
         Returns:
-            dict[str,Any]: The info of this service.
+            Dictionary containing service info with keys:
+            - qupath_available: bool indicating if QuPath integration is installed
+            - supported_file_extensions: list of valid WSI file formats
+            - chunk_sizes: configured upload/download chunk sizes
         """
         return {}
 
