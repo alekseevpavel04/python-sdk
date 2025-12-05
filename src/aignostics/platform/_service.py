@@ -248,6 +248,29 @@ class Service(BaseService):
             },
         )
 
+    def is_api_ready(self) -> tuple[bool, str | None]:
+        """Check if the Aignostics Platform API is ready to accept run submissions.
+
+        This performs a quick health check on both public and authenticated endpoints
+        to determine if the platform is available for run submission.
+
+        Returns:
+            tuple[bool, str | None]: A tuple containing:
+                - bool: True if the API is ready, False otherwise
+                - str | None: Error message if API is not ready, None if ready
+        """
+        # First check public health (faster, no auth needed)
+        public_health = self._determine_api_public_health()
+        if public_health.status != Health.Code.UP:
+            return False, public_health.reason or "Aignostics Platform API is not available."
+
+        # Then check authenticated health
+        auth_health = self._determine_api_authenticated_health()
+        if auth_health.status != Health.Code.UP:
+            return False, auth_health.reason or "Unable to authenticate with Aignostics Platform API."
+
+        return True, None
+
     @staticmethod
     def login(relogin: bool = False) -> bool:
         """Login.

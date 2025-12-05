@@ -20,6 +20,9 @@ from aignostics.platform import (
     DEFAULT_MAX_GPUS_PER_SLIDE,
     DEFAULT_NODE_ACQUISITION_TIMEOUT_MINUTES,
 )
+from aignostics.platform import (
+    Service as PlatformService,
+)
 from aignostics.utils import GUILocalFilePicker, get_user_data_directory
 
 if TYPE_CHECKING:
@@ -718,6 +721,19 @@ async def _page_application_describe(application_id: str) -> None:  # noqa: C901
 
         def _submit() -> None:
             """Submit the application run."""
+            # Check API health before attempting to submit
+            is_ready, error_message = PlatformService().is_api_ready()
+            if not is_ready:
+                ui.notify(
+                    f"Cannot submit runs at this time. {error_message} "
+                    "Please try again later or contact support if the issue persists.",
+                    type="negative",
+                    progress=True,
+                    timeout=1000 * 60 * 5,
+                    close_button=True,
+                )
+                return
+
             ui.notify("Submitting application run ...", type="info")
             try:
                 # Submit run with pipeline configuration
@@ -769,6 +785,20 @@ async def _page_application_describe(application_id: str) -> None:  # noqa: C901
             if submit_form.upload_and_submit_button is None:
                 logger.error("Submission submit button is not initialized.")
                 return
+
+            # Check API health before attempting to upload
+            is_ready, error_message = PlatformService().is_api_ready()
+            if not is_ready:
+                ui.notify(
+                    f"Cannot upload files at this time. {error_message} "
+                    "Please try again later or contact support if the issue persists.",
+                    type="negative",
+                    progress=True,
+                    timeout=1000 * 60 * 5,
+                    close_button=True,
+                )
+                return
+
             message = "Uploading whole slide images to Aignostics Platform ..."
             logger.trace(message)
             ui.notify(message, type="info")

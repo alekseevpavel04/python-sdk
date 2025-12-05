@@ -21,6 +21,9 @@ from aignostics.platform import (
     NotFoundException,
     RunState,
 )
+from aignostics.platform import (
+    Service as PlatformService,
+)
 from aignostics.utils import console, get_user_data_directory, sanitize_path
 
 from ._models import DownloadProgress, DownloadProgressState
@@ -739,6 +742,15 @@ def run_submit(  # noqa: PLR0913, PLR0917
     Returns:
         The ID of the submitted application run.
     """
+    # Check API health before attempting to submit
+    is_ready, error_message = PlatformService().is_api_ready()
+    if not is_ready:
+        console.print(
+            f"[error]Error:[/error] Cannot submit runs at this time. {error_message} "
+            "Please try again later or contact support if the issue persists."
+        )
+        sys.exit(1)
+
     try:
         app_version = Service().application_version(
             application_id=application_id, application_version=application_version
