@@ -89,6 +89,28 @@ You can then proceed by choosing your preferred user interface below.
 
 Choose your preferred interface for working with the Aignostics Platform. Each interface is designed for different user roles and use cases:
 
+### How analysis works
+
+Whether you use the Launchpad, CLI, or Python Library, the analysis workflow follows the same pattern:
+
+```mermaid
+flowchart LR
+    A["📂 Select Slides"] --> B["🔬 Choose Application"]
+    B --> C["📤 Submit Run"]
+    C --> D["⏳ Processing"]
+    D --> E["📥 Download Results"]
+    E --> F["🔍 Inspect & Analyze"]
+
+    style A fill:#e8f4f8,stroke:#0077b6
+    style B fill:#e8f4f8,stroke:#0077b6
+    style C fill:#d4edda,stroke:#28a745
+    style D fill:#fff3cd,stroke:#ffc107
+    style E fill:#d4edda,stroke:#28a745
+    style F fill:#f3e5f5,stroke:#9c27b0
+```
+
+You start by selecting the whole slide images you want to analyze, then choose an application (like Atlas H&E-TME) and submit your run. The Aignostics Platform processes your slides in the cloud, and you download the results when ready. Each interface offers the same capabilities—choose the one that fits your workflow.
+
 ### 🖥️ Launchpad (Desktop Application)
 
 | | |
